@@ -2,7 +2,6 @@ import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -10,6 +9,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { DosMachine } from './dos.js';
 import { RetroAudio } from './audio.js';
 
@@ -56,30 +56,30 @@ function updateObjective() {
   const milestones = state.milestones;
   const machine = dos.state;
   let number = 0;
-  let text = '先打开主机与显示器。';
+  let text = 'Power on the PC and monitor.';
   if (!state.pcOn) {
-    if (milestones.has('score-saved') && !state.diskInserted) { number = 6; text = '完成了。那台电脑里，多了一段属于你的夏天。'; }
-    else if (milestones.has('score-saved')) { number = 5; text = '主机已经关好。取出软盘，把它收好。'; }
+    if (milestones.has('score-saved') && !state.diskInserted) { number = 6; text = 'Done.'; }
+    else if (milestones.has('score-saved')) { number = 5; text = 'Remove the disk.'; }
   } else if (!state.monitorOn) {
-    text = '主机已经开了。打开显示器，看看它在说什么。';
+    text = 'Turn on the monitor.';
   } else if (machine.bootBlocked) {
     number = 1;
-    text = state.diskInserted ? '这张游戏盘不能启动电脑。先把它取出来。' : '取盘后，点击屏幕并按任意键，让电脑从硬盘继续启动。';
+    text = state.diskInserted ? 'Remove the data disk.' : 'Press any key to continue.';
   } else if (machine.mode === 'boot') {
-    number = 1; text = '电脑正在检查内存、寻找系统。等它出现 C:\\>。';
+    number = 1; text = 'Starting DOS.';
   } else if (machine.mode === 'game') {
     number = 4;
-    text = machine.game?.phase === 'title' ? '按 Enter 开始游戏。方向键移动，收集金色包裹。' : '完成游戏，留下你的名字和成绩。';
-    if (machine.game?.phase === 'name') text = '输入名字的英文缩写，再按 Enter，把成绩保存下来。';
-    if (machine.game?.phase === 'result') { number = 5; text = '成绩已经保存。按 Esc 回到 DOS，也可以再玩一轮。'; }
+    text = machine.game?.phase === 'title' ? 'Press Enter to play.' : 'Playing.';
+    if (machine.game?.phase === 'name') text = 'Enter your initials.';
+    if (machine.game?.phase === 'result') { number = 5; text = 'Score saved.'; }
   } else if (milestones.has('score-saved')) {
-    number = 5; text = '你的成绩已经保存。等软驱灯熄灭，取出磁盘，关好电脑。';
+    number = 5; text = 'Score saved.';
   } else if (!state.diskInserted) {
-    number = 1; text = '把桌上的游戏盘插入主机右侧的软驱。';
+    number = 1; text = 'Insert the disk.';
   } else if (milestones.has('disk-listed')) {
-    number = 3; text = '找到 STAR.EXE 了吗？输入 STAR，运行朋友的游戏。';
+    number = 3; text = 'Run STAR.';
   } else {
-    number = 2; text = '查看屏幕，输入 A:，再输入 DIR。每行都按 Enter。';
+    number = 2; text = 'Explore the disk.';
   }
   state.task = number;
   el.taskText.textContent = text;
@@ -96,11 +96,15 @@ const dos = new DosMachine({
     } else if (event.type === 'milestone') {
       state.milestones.add(event.id);
       updateObjective();
-      if (event.id === 'booted') notify('电脑准备好了。点击屏幕，就能使用键盘。');
-    } else if (event.type === 'hint') notify(event.text, 4500);
+    } else if (event.type === 'hint') {
+      // The note and DOS itself carry the instructions. Surface only errors
+      // whose consequence would otherwise be unclear outside the CRT.
+      if (/本地存储|持久存储/.test(event.text)) notify('Storage unavailable. Scores last until this page closes.', 5000);
+      else if (/软驱里没有盘/.test(event.text)) notify('No disk. Insert it, then press R to retry.', 4500);
+      else if (/成绩需要写回/.test(event.text)) notify('Insert the game disk, then Enter to save.', 4500);
+    }
     else if (event.type === 'score-saved') {
       if (event.drive === 'A') pulseDrive(800);
-      notify(`保存完成。你的成绩已经写进${event.drive === 'C' ? '硬盘' : '这张软盘'}。`, 4800);
     }
   },
 });
@@ -110,19 +114,19 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.03;
+renderer.toneMappingExposure = 1.10;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.VSMShadowMap;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#a9b5b4');
+scene.background = new THREE.Color('#080d16');
 const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.025, 18);
 const desktopView = {
   position: new THREE.Vector3(.74, 1.38, 1.53),
   target: new THREE.Vector3(-.015, .995, .045),
 };
 const introView = {
-  position: new THREE.Vector3(.90, 1.43, 1.70),
-  target: new THREE.Vector3(-.20, .99, .065),
+  position: new THREE.Vector3(.98, 1.52, 2.36),
+  target: new THREE.Vector3(.01, 1.18, -.04),
 };
 camera.position.copy(introView.position);
 const controls = new OrbitControls(camera, el.canvas);
@@ -149,45 +153,36 @@ ambientOcclusion.updateGtaoMaterial({ radius: .09, distanceExponent: 1.4, thickn
 ambientOcclusion.updatePdMaterial({ lumaPhi: 6, depthPhi: 2, normalPhi: 3, radius: 5, samples: 8 });
 ambientOcclusion.blendIntensity = .7;
 composer.addPass(ambientOcclusion);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .20, .40, 1.15);
+composer.addPass(bloom);
 composer.addPass(new OutputPass());
 composer.addPass(new SMAAPass());
 
 const pmrem = new THREE.PMREMGenerator(renderer);
 const temporaryEnvironment = pmrem.fromScene(new RoomEnvironment(), .04);
 scene.environment = temporaryEnvironment.texture;
-scene.environmentIntensity = .36;
-new HDRLoader().load('/assets/textures/lebombo_1k.hdr', (hdr) => {
-  scene.environment = pmrem.fromEquirectangular(hdr).texture;
-  scene.environmentIntensity = .34;
-  scene.environmentRotation.set(0, 1.4, 0);
-  hdr.dispose();
-  temporaryEnvironment.dispose();
-}, undefined, () => console.info('Indoor environment uses the bundled procedural room.'));
+scene.environmentIntensity = .10;
+pmrem.dispose();
 
 RectAreaLightUniformsLib.init();
-const sun = new THREE.DirectionalLight('#fff0d5', 1.9);
-sun.position.set(-2.8, 3.2, 1.7);
-sun.target.position.set(.15, .73, -.25);
-sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -2.1;
-sun.shadow.camera.right = 2.1;
-sun.shadow.camera.top = 2.1;
-sun.shadow.camera.bottom = -2.1;
-sun.shadow.camera.near = .1;
-sun.shadow.camera.far = 8;
-sun.shadow.bias = -.00008;
-sun.shadow.normalBias = .003;
-sun.shadow.radius = 8;
-sun.shadow.blurSamples = 12;
-scene.add(sun, sun.target);
-const windowFill = new THREE.RectAreaLight('#e3edfb', 2.6, 1.5, 1.9);
-windowFill.position.set(-1.30, 1.80, .32);
-windowFill.lookAt(.1, .9, 0);
-scene.add(windowFill);
-const roomBounce = new THREE.HemisphereLight('#dde9e7', '#9e7960', .18);
+// Entirely interior lighting: soft ceiling bounce, desk lamp, lava lamp and shelf light.
+const ceiling = new THREE.SpotLight('#ffe1b2', 1.35, 5, 1.02, 1, 2);
+ceiling.position.set(-.45, 2.35, 1.05);
+ceiling.target.position.set(-.1, .75, -.05);
+ceiling.castShadow = true;
+ceiling.shadow.mapSize.set(2048, 2048);
+ceiling.shadow.bias = -.00008;
+ceiling.shadow.normalBias = .002;
+ceiling.shadow.radius = 8;
+ceiling.shadow.blurSamples = 12;
+scene.add(ceiling, ceiling.target);
+const interiorFill = new THREE.RectAreaLight('#c1cce4', .55, 1.4, 1.2);
+interiorFill.position.set(.35, 1.65, 1.1);
+interiorFill.lookAt(0, 1, -.1);
+scene.add(interiorFill);
+const roomBounce = new THREE.HemisphereLight('#7b94c4', '#4b342c', .12);
 scene.add(roomBounce);
-const deskLamp = new THREE.SpotLight('#ffe1b1', 1.5, 2.2, .83, .75, 2);
+const deskLamp = new THREE.SpotLight('#ffcf8d', 2.6, 2.2, .92, .85, 2);
 deskLamp.position.set(.59, 1.25, .05);
 deskLamp.target.position.set(.46, .76, .22);
 deskLamp.castShadow = true;
@@ -197,9 +192,16 @@ deskLamp.shadow.normalBias = .002;
 deskLamp.shadow.radius = 4;
 deskLamp.shadow.blurSamples = 8;
 scene.add(deskLamp, deskLamp.target);
-const lampBounce = new THREE.PointLight('#ffd49c', .11, 1.5, 2);
+const lampBounce = new THREE.PointLight('#ffc477', .16, 1.5, 2);
 lampBounce.position.copy(deskLamp.position);
 scene.add(lampBounce);
+const lavaLight = new THREE.PointLight('#ff702e', .28, 2.1, 2);
+lavaLight.position.set(-1.015, .89, -.25);
+scene.add(lavaLight);
+const shelfLight = new THREE.PointLight('#719bf6', .18, 1.6, 2);
+shelfLight.position.set(1.16, 1.09, -.23);
+scene.add(shelfLight);
+const lavaBlobs = [];
 const screenGlow = new THREE.RectAreaLight('#bcd5eb', 0, .25, .18);
 screenGlow.position.set(0, 1.16, .25);
 screenGlow.lookAt(0, .81, .70);
@@ -279,6 +281,7 @@ function setupModel(gltf) {
   const finishedMaterials = new Set();
   model.traverse((object) => {
     if (!object.isMesh) return;
+    if (object.name.startsWith('Lava_Blob')) lavaBlobs.push({object, base: object.position.y, phase: lavaBlobs.length * 1.7});
     object.castShadow = true;
     object.receiveShadow = true;
     const materials = Array.isArray(object.material) ? object.material : [object.material];
@@ -300,6 +303,13 @@ function setupModel(gltf) {
       if (material.name?.toLowerCase().includes('glass')) {
         object.castShadow = false;
         material.envMapIntensity = .5;
+        if (material.name.startsWith('Lava_Glass')) {
+          material.transmission = .82;
+          material.thickness = .07;
+          material.roughness = .12;
+          material.attenuationColor.set('#ffbe74');
+          material.attenuationDistance = .12;
+        }
       }
     });
   });
@@ -360,19 +370,19 @@ function setupModel(gltf) {
   setLED(powerLED, false);
   setLED(monitorLED, false);
   setLED(driveLED, false);
-  addInteraction(findObject('PC_Power_Button'), () => state.pcOn ? '关闭主机电源' : '打开主机电源', togglePC);
-  addInteraction(findObject('Monitor_Power_Button'), () => state.monitorOn ? '关闭显示器' : '打开显示器', toggleMonitor);
-  addInteraction(findObject('Drive_Eject_Button'), () => state.diskInserted ? '弹出软盘' : '插入游戏软盘', toggleDisk);
-  addInteraction(diskObject, () => state.diskInserted ? '取出游戏软盘' : '插入游戏软盘', toggleDisk);
-  addInteraction(screenMesh, '靠近屏幕，使用键盘', focusScreen);
-  addInteraction(findObject('Lamp_Switch'), () => state.lampOn ? '关闭台灯' : '打开台灯', toggleLamp);
-  addInteraction(findObject('Command_Note'), '看看朋友留下的小抄', () => toggleHelp(true));
-  addInteraction(findObject('DeskLamp_Shade') || findObject('DeskLamp_Base') || lampBulb, () => state.lampOn ? '关闭台灯' : '打开台灯', toggleLamp);
+  addInteraction(findObject('PC_Power_Button'), () => state.pcOn ? 'PC off' : 'PC on', togglePC);
+  addInteraction(findObject('Monitor_Power_Button'), () => state.monitorOn ? 'Monitor off' : 'Monitor on', toggleMonitor);
+  addInteraction(findObject('Drive_Eject_Button'), () => state.diskInserted ? 'Eject disk' : 'Insert disk', toggleDisk);
+  addInteraction(diskObject, () => state.diskInserted ? 'Eject disk' : 'Insert disk', toggleDisk);
+  addInteraction(screenMesh, 'Use computer', focusScreen);
+  addInteraction(findObject('Lamp_Switch'), () => state.lampOn ? 'Lamp off' : 'Lamp on', toggleLamp);
+  addInteraction(findObject('Command_Note'), 'Read note', () => toggleHelp(true));
+  addInteraction(findObject('DeskLamp_Shade') || findObject('DeskLamp_Base') || lampBulb, () => state.lampOn ? 'Lamp off' : 'Lamp on', toggleLamp);
   for (const [name, fallbackSize, label, action] of [
-    ['PC_Power_Button', [.040, .032, .016], () => state.pcOn ? '关闭主机电源' : '打开主机电源', togglePC],
-    ['Monitor_Power_Button', [.027, .027, .016], () => state.monitorOn ? '关闭显示器' : '打开显示器', toggleMonitor],
-    ['Drive_Eject_Button', [.027, .025, .020], () => state.diskInserted ? '弹出软盘' : '插入游戏软盘', toggleDisk],
-    ['Lamp_Switch', [.032, .025, .032], () => state.lampOn ? '关闭台灯' : '打开台灯', toggleLamp],
+    ['PC_Power_Button', [.040, .032, .016], () => state.pcOn ? 'PC off' : 'PC on', togglePC],
+    ['Monitor_Power_Button', [.027, .027, .016], () => state.monitorOn ? 'Monitor off' : 'Monitor on', toggleMonitor],
+    ['Drive_Eject_Button', [.027, .025, .020], () => state.diskInserted ? 'Eject disk' : 'Insert disk', toggleDisk],
+    ['Lamp_Switch', [.032, .025, .032], () => state.lampOn ? 'Lamp off' : 'Lamp on', toggleLamp],
   ]) {
     const object = findObject(name);
     if (object) {
@@ -399,8 +409,8 @@ function loadModel() {
 }
 function loadError(error) {
   console.error('Scene load failed:', error);
-  el.loadingTitle.textContent = '桌面暂时没有载入';
-  el.loadingDetail.textContent = '请稍后重新载入场景。';
+  el.loadingTitle.textContent = 'Room unavailable';
+  el.loadingDetail.textContent = 'Reload to try again.';
   $('#reload-scene').hidden = false;
 }
 $('#reload-scene').addEventListener('click', () => location.reload());
@@ -435,10 +445,8 @@ function togglePC() {
   state.pcOn = !state.pcOn;
   if (state.pcOn) {
     dos.powerOn();
-    if (!state.monitorOn) notify('主机启动了。再按一下显示器右下角的开关。');
   } else {
     dos.powerOff();
-    if (!state.milestones.has('score-saved')) notify('主机电源已关闭。');
   }
   $('#pc-indicator').classList.toggle('is-on', state.pcOn);
   setLED(powerLED, state.pcOn);
@@ -454,7 +462,6 @@ function toggleMonitor() {
   $('#monitor-indicator').classList.toggle('is-on', state.monitorOn);
   screenMesh.material = state.monitorOn && state.pcOn ? screenMaterial : screenOffMaterial;
   setLED(monitorLED, state.monitorOn);
-  if (state.monitorOn && !state.pcOn) notify('显示器亮着待机灯。主机还没有开机。');
   updateObjective();
 }
 
@@ -462,7 +469,7 @@ function toggleDisk() {
   if (!state.loaded || state.diskMoving) return;
   beginExperience();
   if (state.diskInserted && state.driveActive) {
-    notify('软驱还在读写。等小灯熄灭，再取出磁盘。');
+    notify('Drive busy. Wait for the light to go out.');
     return;
   }
   const inserting = !state.diskInserted;
@@ -502,7 +509,7 @@ function focusScreen() {
   animateCamera(focusPosition, screenCenter, 950);
   el.canvas.focus({ preventScroll: true });
   el.hoverLabel.hidden = true;
-  if (!state.pcOn || !state.monitorOn) notify('先打开主机和显示器，再开始输入。');
+  if (!state.pcOn || !state.monitorOn) notify('Turn on the PC and monitor to type.');
 }
 
 function returnToDesk() {
@@ -523,8 +530,8 @@ function toggleLamp() {
   deskLamp.visible = state.lampOn;
   lampBounce.visible = state.lampOn;
   el.lampToggle.setAttribute('aria-pressed', String(state.lampOn));
-  el.lampToggle.setAttribute('aria-label', state.lampOn ? '关闭台灯' : '打开台灯');
-  el.lampToggle.title = state.lampOn ? '关闭台灯' : '打开台灯';
+  el.lampToggle.setAttribute('aria-label', state.lampOn ? 'Turn lamp off' : 'Turn lamp on');
+  el.lampToggle.title = state.lampOn ? 'Turn lamp off' : 'Turn lamp on';
   if (lampBulb) lampBulb.traverse((object) => {
     if (object.isMesh && object.material.emissive) object.material.emissiveIntensity = state.lampOn ? 2 : 0;
   });
@@ -558,8 +565,8 @@ el.soundToggle.addEventListener('click', () => {
   state.sound = !state.sound;
   audio.setEnabled(state.sound);
   el.soundToggle.setAttribute('aria-pressed', String(state.sound));
-  el.soundToggle.setAttribute('aria-label', state.sound ? '关闭声音' : '打开声音');
-  el.soundToggle.title = state.sound ? '关闭声音' : '打开声音';
+  el.soundToggle.setAttribute('aria-label', state.sound ? 'Mute sound' : 'Unmute sound');
+  el.soundToggle.title = state.sound ? 'Mute sound' : 'Unmute sound';
 });
 
 const raycaster = new THREE.Raycaster();
@@ -629,8 +636,12 @@ const bezier = new THREE.Vector3();
 let lastScreenFrame = 0;
 function frame(now) {
   requestAnimationFrame(frame);
+  if (!reducedMotion) {
+    lavaBlobs.forEach(({object, base, phase}) => { object.position.y = base + Math.sin(now * .00031 + phase) * .006; });
+    lavaLight.intensity = .28 + Math.sin(now * .00052) * .012;
+  }
   if (cameraTransition) {
-    const t = Math.min(1, (now - cameraTransition.start) / cameraTransition.duration);
+    const t = THREE.MathUtils.clamp((now - cameraTransition.start) / cameraTransition.duration, 0, 1);
     const ease = smoothstep(t);
     camera.position.lerpVectors(cameraTransition.fromPosition, cameraTransition.toPosition, ease);
     controls.target.lerpVectors(cameraTransition.fromTarget, cameraTransition.toTarget, ease);
@@ -642,7 +653,8 @@ function frame(now) {
   } else if (!state.screenFocused) controls.update();
   if (diskAnimation) {
     const animation = diskAnimation;
-    const t = Math.min(1, (now - animation.start) / animation.duration);
+    // An input event can occur after this RAF timestamp was sampled.
+    const t = THREE.MathUtils.clamp((now - animation.start) / animation.duration, 0, 1);
     const segment = Math.min(2, Math.floor(t * 3));
     const localT = smoothstep(Math.min(1, t * 3 - segment));
     bezier.lerpVectors(animation.points[segment], animation.points[segment + 1], localT);
@@ -653,10 +665,11 @@ function frame(now) {
       state.diskInserted = animation.inserting;
       dos.setDisk(state.diskInserted);
       diskAnimation = null;
-      el.diskToggle.querySelector('span').textContent = state.diskInserted ? '弹出软盘' : '插入软盘';
+      el.diskToggle.querySelector('span').textContent = state.diskInserted ? 'Eject disk' : 'Insert disk';
+      el.diskToggle.title = state.diskInserted ? 'Eject disk' : 'Insert disk';
+      el.diskToggle.setAttribute('aria-label', el.diskToggle.title);
       pulseDrive(state.pcOn ? 550 : 0);
-      if (dos.state.bootBlocked) notify(state.diskInserted ? '这张游戏盘不能启动电脑，先取出软盘。' : '软盘已取出。点击屏幕并按任意键，让电脑继续启动。', 5000);
-      else notify(state.diskInserted ? '咔哒。游戏软盘已经插好了。' : '软盘已放回桌上。');
+      if (dos.state.bootBlocked) notify(state.diskInserted ? 'Remove the data disk to boot.' : 'Disk out. Press any key at the screen.', 4500);
       updateObjective();
     }
   }
@@ -690,5 +703,5 @@ window.__DESK__ = {
   state, dos, scene, camera, renderer, controls, composer, ambientOcclusion,
   get model() { return model; },
   get screenCenter() { return screenCenter.clone(); },
-  get lights() { return { sun, windowFill, roomBounce, deskLamp, lampBounce, screenGlow }; },
+  get lights() { return { ceiling, interiorFill, roomBounce, deskLamp, lampBounce, lavaLight, shelfLight, screenGlow }; },
 };

@@ -187,3 +187,121 @@ test('hard disk copies save into their own directory and do not change the flopp
   machine.execute('c:\\games\\mail.exe');
   assert.equal(machine.state.highScore.initials, 'HD');
 });
+
+test('C drive exploration discovers both images and the local viewer instructions', async () => {
+  const loaded = [];
+  const machine = start({ loadImage: async url => { loaded.push(url); return { width: 640, height: 480 }; } });
+  machine.execute('dir');
+  assert.match(output(machine), /GAMES\s+<DIR>/);
+  machine.execute('cd games');
+  machine.execute('dir');
+  assert.match(output(machine), /BONUS\s+<DIR>/);
+  machine.execute('cd bonus');
+  machine.execute('dir *.gif');
+  assert.match(output(machine), /MOON\s+GIF/);
+  assert.match(output(machine), /GARAGE\s+GIF/);
+  machine.execute('type readme.txt');
+  assert.match(output(machine), /VIEW MOON\.GIF/);
+  for (const [command, name, url] of [
+    ['view moon.gif', 'MOON.GIF', '/assets/easter/moon.png'],
+    ['view.exe garage.gif', 'GARAGE.GIF', '/assets/easter/garage.png']
+  ]) {
+    machine.execute(command);
+    assert.equal(machine.state.mode, 'viewer');
+    assert.equal(machine.state.viewer.status, 'loading');
+    assert.equal(machine.state.viewer.filename, name);
+    for (const input of ['a', 'ArrowLeft', 'Enter']) key(machine, input);
+    key(machine, 'ArrowLeft', 'keyup');
+    assert.equal(machine.state.mode, 'viewer', 'only Escape exits the viewer');
+    assert.equal(machine.state.command, '', 'viewer keystrokes must not leak into the DOS prompt');
+    assert.equal(machine.keys.size, 0, 'viewer navigation does not leave movement keys held');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(machine.state.viewer.status, 'ready');
+    assert.equal(loaded.at(-1), url);
+    key(machine, 'Escape');
+    assert.equal(machine.state.mode, 'dos');
+    assert.equal(machine.state.viewer, null);
+    assert.equal(machine.state.cwd, 'C:\\GAMES\\BONUS');
+    assert.equal(machine.state.command, '');
+    assert.match(output(machine), new RegExp(command.replace('.', '\\.')));
+  }
+});
+
+test('viewer handles missing files, unsupported files and unavailable image loading without trapping DOS', async () => {
+  const machine = start({ loadImage: async () => { throw new Error('network unavailable'); } });
+  machine.execute('view.exe c:\\games\\bonus\\moon.gif');
+  assert.match(output(machine), /Bad command or file name/, 'VIEW.EXE must exist at the invoked path');
+  machine.execute('view missing.gif');
+  assert.match(output(machine), /File not found/);
+  machine.execute('view readme.txt');
+  assert.match(output(machine), /Unsupported image format/);
+  assert.equal(machine.state.mode, 'dos');
+  machine.execute('view c:\\games\\bonus\\moon.gif');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(machine.state.viewer.status, 'error');
+  key(machine, 'Escape');
+  machine.execute('ver');
+  assert.equal(machine.state.mode, 'dos');
+  assert.equal(machine.state.cwd, 'C:\\');
+  assert.match(output(machine), /MS-DOS Version 6\.22/);
+
+  // Browser Image is optional: the normal constructor remains usable in Node.
+  const headless = start();
+  headless.execute('view c:\\games\\bonus\\garage.gif');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(headless.state.viewer.status, 'error');
+  key(headless, 'Escape');
+  assert.equal(headless.state.mode, 'dos');
+});
+
+test('a late image load cannot reopen a viewer after Esc or a power cycle', async () => {
+  const pending = [];
+  const machine = start({ loadImage: () => new Promise(resolve => pending.push(resolve)) });
+  machine.execute('view c:\\games\\bonus\\moon.gif');
+  await new Promise(resolve => setImmediate(resolve));
+  key(machine, 'Escape');
+  machine.execute('view c:\\games\\bonus\\garage.gif');
+  await new Promise(resolve => setImmediate(resolve));
+  pending[0]({ width: 640, height: 480 });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(machine.state.viewer.filename, 'GARAGE.GIF');
+  assert.equal(machine.state.viewer.status, 'loading');
+  machine.powerOff();
+  machine.powerOn();
+  machine.update(3);
+  pending[1]({ width: 640, height: 480 });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(machine.state.mode, 'dos');
+  assert.equal(machine.state.viewer, null);
+});
+
+test('existing disk storage is upgraded additively and preserves personal files and scores', () => {
+  const storage = makeStorage();
+  const original = new DosMachine({ storage });
+  const volumes = JSON.parse(JSON.stringify(original.volumes));
+  delete volumes.C.entries.GAMES.entries.BONUS;
+  volumes.C.entries.GAMES.entries['SCORES.DAT'] = { type: 'file', kind: 'text', content: 'HIGH SCORE: 900\nCOURIER: OLD' };
+  volumes.C.entries['MYNOTE.TXT'] = { type: 'file', kind: 'text', content: 'do not erase this' };
+  volumes.A.entries['SCORES.DAT'] = { type: 'file', kind: 'text', content: 'HIGH SCORE: 600\nCOURIER: BRO' };
+  storage.setItem('i486.volumes.v1', JSON.stringify(volumes));
+  storage.setItem('i486.star.record.v1', JSON.stringify({ initials: 'BRO', score: 600 }));
+  const upgraded = new DosMachine({ storage });
+  const expected = JSON.parse(JSON.stringify(volumes));
+  expected.C.entries.GAMES.entries.BONUS = original.volumes.C.entries.GAMES.entries.BONUS;
+  assert.deepEqual(upgraded.volumes, expected);
+  assert.deepEqual(upgraded.state.highScore, { initials: 'BRO', score: 600 });
+  assert.deepEqual(JSON.parse(storage.getItem('i486.volumes.v1')), expected, 'upgrade persists without a later game save');
+  assert.deepEqual(new DosMachine({ storage }).volumes, expected, 'repeated startup makes no further changes');
+
+  // Partially populated folders and name collisions keep the user's exact entries.
+  const customMoon = { type: 'file', kind: 'text', content: 'my old moon file' };
+  expected.C.entries.GAMES.entries.BONUS.entries['MOON.GIF'] = customMoon;
+  delete expected.C.entries.GAMES.entries.BONUS.entries['GARAGE.GIF'];
+  storage.setItem('i486.volumes.v1', JSON.stringify(expected));
+  const partial = new DosMachine({ storage });
+  assert.deepEqual(partial.volumes.C.entries.GAMES.entries.BONUS.entries['MOON.GIF'], customMoon);
+  assert.equal(partial.volumes.C.entries.GAMES.entries.BONUS.entries['GARAGE.GIF'].kind, 'image');
+  expected.C.entries.GAMES.entries.BONUS = { type: 'file', kind: 'text', content: 'existing name conflict' };
+  storage.setItem('i486.volumes.v1', JSON.stringify(expected));
+  assert.deepEqual(new DosMachine({ storage }).volumes, expected);
+});

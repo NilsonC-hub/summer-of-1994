@@ -4,12 +4,52 @@ const RECORD_KEY = 'i486.star.record.v1';
 const TEXT_COLOR = '#c4d1c8';
 const FILE = (content, kind = 'text') => ({ type: 'file', kind, content });
 const DIR = (entries = {}) => ({ type: 'dir', entries });
+const BONUS_IMAGES = Object.freeze({
+  MOON: '/assets/easter/moon.png',
+  GARAGE: '/assets/easter/garage.png'
+});
+
+function bonusDirectory() {
+  return DIR({
+    'MOON.GIF': FILE('MOON', 'image'),
+    'GARAGE.GIF': FILE('GARAGE', 'image'),
+    'VIEW.EXE': FILE('VGA_VIEWER_1994', 'program'),
+    'README.TXT': FILE('dude, you found my stash.\n\nVIEW MOON.GIF\nVIEW GARAGE.GIF\n\nESC gets you back here.\nkeep these off the school printer, ok?\n\n- j')
+  });
+}
+
+// Upgrade existing disks additively. User-created files and directory conflicts win.
+function installBonus(hardDisk) {
+  let changed = false;
+  function addMissing(target, source) {
+    for (const [name, value] of Object.entries(source.entries)) {
+      if (!Object.hasOwn(target.entries, name)) {
+        target.entries[name] = clone(value);
+        changed = true;
+      } else if (target.entries[name]?.type === 'dir' && value.type === 'dir') {
+        addMissing(target.entries[name], value);
+      }
+    }
+  }
+  addMissing(hardDisk, DIR({ GAMES: DIR({ BONUS: bonusDirectory() }) }));
+  return changed;
+}
+
+function browserLoadImage(url) {
+  return new Promise((resolve, reject) => {
+    if (typeof globalThis.Image !== 'function') { reject(new Error('Image display unavailable')); return; }
+    const image = new globalThis.Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Image could not be loaded'));
+    image.src = url;
+  });
+}
 
 function defaultVolumes() {
   return {
     C: DIR({
       DOS: DIR({ 'HELP.TXT': FILE('DOS QUICK REFERENCE\n\nDIR        List files\nTYPE name  Read a text file\nCD folder  Change directory\nCOPY a b   Copy a file\nA: or C:   Change drive\nCLS        Clear the screen') }),
-      GAMES: DIR(),
+      GAMES: DIR({ BONUS: bonusDirectory() }),
       'AUTOEXEC.BAT': FILE('@ECHO OFF\nPROMPT $P$G\nPATH C:\\DOS'),
       'CONFIG.SYS': FILE('FILES=30\nBUFFERS=20'),
       'README.TXT': FILE('WELCOME HOME.\n\nYour computer starts from its hard disk, drive C:.\nThe 3.5-inch floppy drive is A:.\n\nInsert the disk marked STAR COURIER.\nType A: and press ENTER.\nType DIR to see what is on the disk.\nType STAR to run the game.\n\nTip: commands work in upper or lower case.')
@@ -36,12 +76,18 @@ function patternMatches(name, pattern) {
 }
 
 export class DosMachine {
-  constructor({ onChange = () => {}, onEvent = () => {}, storage = getStorage() } = {}) {
+  constructor({ onChange = () => {}, onEvent = () => {}, storage = getStorage(), loadImage = browserLoadImage } = {}) {
     this.onChange = onChange;
     this.onEvent = onEvent;
     this.storage = storage;
     const saved = readStorage(storage, VOLUME_KEY, null);
     this.volumes = saved?.C?.type === 'dir' && saved?.A?.type === 'dir' ? saved : defaultVolumes();
+    if (installBonus(this.volumes.C)) {
+      // Migration must also work in memory when storage is unavailable.
+      try { this.storage?.setItem(VOLUME_KEY, JSON.stringify(this.volumes)); } catch {}
+    }
+    this.loadImage = loadImage;
+    this.viewer = null;
     const record = readStorage(storage, RECORD_KEY, null);
     this.highScore = record && Number.isFinite(record.score) && /^[A-Z0-9]{1,3}$/.test(record.initials)
       ? { initials: record.initials, score: Math.max(0, record.score) } : { initials: '---', score: 0 };
@@ -80,6 +126,10 @@ export class DosMachine {
       awaitingDisk: !!this._pendingIO,
       highScore: { ...this.highScore },
       lastSave: this.lastSave ? { ...this.lastSave } : null,
+      viewer: this.viewer ? {
+        filename: this.viewer.filename, path: this.viewer.path,
+        status: this.viewer.status, error: this.viewer.error
+      } : null,
       game: this.game ? {
         phase: this.game.phase, score: this.game.score, lives: this.game.lives,
         timeRemaining: Math.max(0, Math.ceil(30 - this.game.elapsed)),
@@ -113,6 +163,7 @@ export class DosMachine {
     this.command = '';
     this.lines = [];
     this.game = null;
+    this.viewer = null;
     this.keys.clear();
     this._pendingIO = null;
     this._bootElapsed = 0;
@@ -129,6 +180,7 @@ export class DosMachine {
     this.powered = false;
     this.mode = 'off';
     this.game = null;
+    this.viewer = null;
     this.command = '';
     this.keys.clear();
     this._pendingIO = null;
@@ -286,6 +338,7 @@ export class DosMachine {
       }
       case 'DIR': this._dir(args, input); break;
       case 'TYPE': this._type(args, input); break;
+      case 'VIEW': this._view(args, input); break;
       case 'CD':
       case 'CHDIR': this._cd(args, input); break;
       case 'MD':
@@ -295,7 +348,7 @@ export class DosMachine {
       case 'TIME': this._line('Current time is 16:24:00.00'); break;
       case 'ECHO': this._line(args.join(' ')); break;
       case 'EXIT': this._line('You are already at the DOS prompt.'); this._hint('已经回到 DOS。等软驱停止读写，再取盘并按主机电源键关机。'); break;
-      default: this._runProgram(command, input); break;
+      default: this._runProgram(command, input, args); break;
     }
   }
 
@@ -343,7 +396,47 @@ export class DosMachine {
     const node = this._node(path);
     if (!node || node.type !== 'file') this._line('File not found');
     else if (node.kind === 'program') this._line('MZ... [binary executable - type its name to run]');
+    else if (node.kind === 'image') this._line('GIF89a... [VGA image - use VIEW filename.GIF]');
     else this._line(node.content);
+  }
+
+  _view(args, input) {
+    if (args.length !== 1) { this._line('Usage: VIEW filename.GIF'); return; }
+    const path = this._path(args[0]);
+    if (!this._accessible(path, () => this._run(input))) return;
+    const node = this._node(path);
+    if (node?.type !== 'file') { this._line('File not found'); return; }
+    if (node.kind !== 'image' || !Object.hasOwn(BONUS_IMAGES, node.content)) {
+      this._line('Unsupported image format'); return;
+    }
+    const viewer = {
+      filename: path.parts[path.parts.length - 1],
+      path: `${path.drive}:\\${path.parts.join('\\')}`,
+      status: 'loading', error: '', image: null
+    };
+    this.viewer = viewer;
+    this.mode = 'viewer';
+    this.keys.clear();
+    Promise.resolve().then(() => this.loadImage(BONUS_IMAGES[node.content])).then(image => {
+      if (this.viewer !== viewer || this.mode !== 'viewer') return;
+      if (!(image?.naturalWidth || image?.width) || !(image?.naturalHeight || image?.height)) throw new Error('Empty image');
+      viewer.image = image;
+      viewer.status = 'ready';
+      this._change();
+    }).catch(() => {
+      if (this.viewer !== viewer || this.mode !== 'viewer') return;
+      viewer.status = 'error';
+      viewer.error = 'IMAGE COULD NOT BE LOADED';
+      this._change();
+    });
+    this._change();
+  }
+
+  _closeViewer() {
+    this.viewer = null;
+    this.mode = 'dos';
+    this.keys.clear();
+    this._change();
   }
 
   _cd(args, input) {
@@ -390,7 +483,7 @@ export class DosMachine {
     this._hint('文件已经复制。即使取出软盘，硬盘上的副本也还在。');
   }
 
-  _runProgram(command, input) {
+  _runProgram(command, input, args = []) {
     const path = this._path(command);
     if (!this._accessible(path, () => this._run(input))) return;
     let node = this._node(path);
@@ -401,7 +494,9 @@ export class DosMachine {
         if (found) { node = found; path.parts = candidate.parts; break; }
       }
     }
-    if (node?.kind === 'program' && node.content === 'STAR_COURIER_1994') {
+    if (node?.kind === 'program' && node.content === 'VGA_VIEWER_1994') {
+      this._view(args, input);
+    } else if (node?.kind === 'program' && node.content === 'STAR_COURIER_1994') {
       this.highScore = this._recordAt({ drive: path.drive, parts: path.parts.slice(0, -1) });
       this._resumeCommand = `${path.drive}:\\${path.parts.join('\\')}`;
       this.mode = 'game';
@@ -503,6 +598,10 @@ export class DosMachine {
       if (this._bootBlocked && !this.diskInserted) this._finishBoot();
       return true;
     }
+    if (this.mode === 'viewer') {
+      if (key === 'Escape') this._closeViewer();
+      return true;
+    }
     if (this.mode === 'game') {
       const game = this.game;
       if (game.phase === 'playing') {
@@ -590,9 +689,32 @@ export class DosMachine {
     ctx.fillRect(0, 0, 800, 600);
     if (this.powered) {
       if (this.mode === 'game') this._renderGame(ctx, timeMs / 1000);
+      else if (this.mode === 'viewer') this._renderViewer(ctx);
       else this._renderDOS(ctx, timeMs);
     }
     ctx.restore();
+  }
+
+  _renderViewer(ctx) {
+    const viewer = this.viewer;
+    ctx.fillStyle = '#08080d';
+    ctx.fillRect(0, 0, 800, 600);
+    ctx.font = '24px "VT323", monospace';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'center';
+    if (viewer.status === 'ready') {
+      const image = viewer.image;
+      const width = image.naturalWidth || image.width;
+      const height = image.naturalHeight || image.height;
+      const scale = Math.min(800 / width, 568 / height);
+      ctx.drawImage(image, (800 - width * scale) / 2, (568 - height * scale) / 2, width * scale, height * scale);
+    } else {
+      ctx.fillStyle = TEXT_COLOR;
+      ctx.fillText(viewer.status === 'loading' ? 'READING IMAGE...' : viewer.error, 400, 274);
+    }
+    ctx.fillStyle = '#afb9b4';
+    ctx.fillText(`${viewer.filename}                         ESC - DOS`, 400, 574);
+    ctx.textAlign = 'left';
   }
 
   _renderDOS(ctx, timeMs) {

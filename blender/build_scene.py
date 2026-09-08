@@ -174,9 +174,9 @@ def setup(reset=False):
     material('Amber_LED',(.65,.20,.015),.28,0,.6)
     material('Wood',(.23,.105,.044),.44)
     material('Wood_Edge',(.17,.082,.035),.4)
-    material('Wall',(.52,.55,.47),.95)
+    material('Wall',(.055,.095,.13),.95)
     material('Trim',(.73,.71,.60),.52)
-    material('Floor',(.15,.105,.066),.65)
+    material('Floor',(.14,.115,.10),.93)
     material('Lamp_Green',(.035,.105,.07),.23,.12)
     material('Brass',(.42,.255,.085),.24,.7)
     material('Paper',(.83,.78,.63),.86)
@@ -187,9 +187,9 @@ def setup(reset=False):
     scene.render.engine='CYCLES';scene.cycles.samples=48
     scene.render.resolution_x=1600;scene.render.resolution_y=1000;scene.render.resolution_percentage=100
     scene.view_settings.view_transform='AgX'
-    world=bpy.data.worlds.get('Afternoon ambient') or bpy.data.worlds.new('Afternoon ambient');world.use_nodes=True
-    world.node_tree.nodes['Background'].inputs[0].default_value=(.48,.58,.67,1)
-    world.node_tree.nodes['Background'].inputs[1].default_value=.25;scene.world=world
+    world=bpy.data.worlds.get('Night interior') or bpy.data.worlds.new('Night interior');world.use_nodes=True
+    world.node_tree.nodes['Background'].inputs[0].default_value=(.09,.14,.22,1)
+    world.node_tree.nodes['Background'].inputs[1].default_value=.08;scene.world=world
 
 def stage_room():
     # Desk top and original joinery.
@@ -200,18 +200,12 @@ def stage_room():
     box('Drawer_Cabinet',(-.565,.02,.595),(.34,.68,.20),'Wood',.007,'Room')
     box('Drawer_Front',(-.565,-.337,.600),(.327,.017,.173),'Wood_Edge',.004,'Room')
     box('Drawer_Handle',(-.565,-.352,.63),(.102,.014,.012),'Brass',.004,'Room')
-    box('Back_Wall',(0,.76,1.20),(3.4,.09,2.6),'Wall',.003,'Room')
-    box('Right_Wall',(1.52,-.3,1.2),(.09,2.1,2.6),'Wall',.003,'Room')
-    box('Room_Floor',(0,-.5,-.035),(3.4,3.4,.07),'Floor',.002,'Room')
-    box('Skirting_Back',(0,.70,.055),(3.0,.035,.11),'Trim',.002,'Room')
-    # Window on left, open centre; glass is deliberately outside the interaction zone.
-    for y in [-.5,.53]:box('Window_Vertical_Frame',(-1.14,y,1.47),(.10,.052,1.30),'Trim',.002,'Room')
-    for z in [.83,2.11]:box('Window_Horizontal_Frame',(-1.14,.015,z),(.10,1.08,.052),'Trim',.002,'Room')
-    box('Window_Crossbar',(-1.14,.015,1.47),(.08,1.05,.026),'Trim',.002,'Room')
-    box('Window_Sill',(-1.09,.015,.82),(.22,1.2,.04),'Trim',.004,'Room')
-    for i in range(14):
-        o=box('Window_Blind_%02d'%i,(-1.12,.015,2.055-i*.047),(.071,1.005,.008),'Trim',.001,'Room');o.rotation_euler.y=math.radians(-18)
-    cable('Blind_cord',[(-1.055,.51,1.99),(-1.055,.51,1.37),(-1.055,.51,1.11)],.0012,'Paper','Room')
+    box('Back_Wall',(-.15,.76,1.20),(3.50,.09,2.6),'Wall',.003,'Room')
+    box('Right_Wall',(1.57,-.68,1.2),(.09,2.8,2.6),'Wall',.003,'Room')
+    box('Left_Wall',(-1.87,-.68,1.2),(.09,2.8,2.6),'Wall',.003,'Room')
+    box('Room_Floor',(-.15,-.65,-.035),(3.5,3.0,.07),'Floor',.002,'Room')
+    box('Skirting_Back',(-.15,.699,.055),(3.4,.035,.11),'Wood_Edge',.002,'Room')
+    for x in [-1.82,1.52]:box('Skirting_Side',(x,-.68,.055),(.035,2.78,.11),'Wood_Edge',.002,'Room')
 
 def stage_computer():
     # Horizontal AT-style case; three dimensional seam and inset front panel.
@@ -278,7 +272,9 @@ def stage_computer():
     text_obj('Monitor_spec','SVGA 14',(-.137,-.222,1.004),.003)
     for x in [-.03,-.01,.01,.03]:cylinder('Monitor_Control',(x,-.219,1.013),.004,.003,'ABS_Shadow',rotation=(math.pi/2,0,0),vertices=20)
     for i in range(15):
-        box('CRT_Top_Vent_%02d'%i,(-.10+i*.014,.07,1.287),(.006,.095,.001),'ABS_Shadow',.001)
+        # Follow the shell's -0.10 Z/Y slope and stay inside its flat top shoulder.
+        vent=box('CRT_Top_Vent_%02d'%i,(-.084+i*.012,.05,1.27825),(.005,.080,.0008),'ABS_Shadow',.0002)
+        vent.rotation_euler.x=math.atan(-.1)
     cable('Monitor_Cable',[(.03,.195,1.075),(.06,.32,.91),(.15,.32,.805),(.14,.26,.81)],.004)
 
 def camera_light():
@@ -287,13 +283,15 @@ def camera_light():
         d=bpy.data.lights.new(name,'AREA');d.energy=energy;d.color=color;d.shape='DISK';d.size=size
         o=bpy.data.objects.new(name,d);collection('Lighting').objects.link(o);o.location=loc
         o.rotation_euler=(Vector(target)-o.location).to_track_quat('-Z','Y').to_euler();return o
-    area('Window_softbox',(-1.3,-.35,1.8),100,(.77,.85,1),1.25,(0,0,.9))
-    area('Warm_lamp_pool',(.59,-.03,1.27),12,(1,.67,.34),.21,(.22,-.1,.76))
-    area('Camera_fill',(.45,-1.1,1.6),25,(1,.88,.70),1.8,(0,0,1))
+    area('Ceiling_bounce',(-.5,-.6,2.25),19,(1,.77,.48),1.6,(0,0,.85))
+    area('Warm_lamp_pool',(.515,.02,1.23),13,(1,.62,.27),.16,(.24,-.15,.76))
+    area('Interior_fill',(.45,-1.1,1.65),7,(.64,.76,1),1.4,(0,0,1))
+    area('Lava_wall_glow',(-1.00,.30,.99),9,(1,.15,.025),.22,(-.8,.72,1.1))
+    area('Shelf_accent',(.97,.5,1.55),5,(.23,.48,1),.38,(.8,.1,1.1))
     d=bpy.data.cameras.new('Seated first person');o=bpy.data.objects.new('Camera_Overview',d)
-    collection('Lighting').objects.link(o);o.location=(.85,-1.48,1.40)
-    o.rotation_euler=(Vector((0,-.02,1.00))-o.location).to_track_quat('-Z','Y').to_euler()
-    d.lens=45;scene.camera=o
+    collection('Lighting').objects.link(o);o.location=(.939,-2.258,1.506)
+    o.rotation_euler=(Vector((.01,.04,1.18))-o.location).to_track_quat('-Z','Y').to_euler()
+    d.lens=38;scene.camera=o
     for a in bpy.context.screen.areas if bpy.context.screen else []:
         if a.type=='VIEW_3D':
             a.spaces.active.region_3d.view_perspective='CAMERA'
@@ -310,16 +308,25 @@ def load_materials():
     for mat in bpy.data.materials: M[mat.name]=mat
 
 def stage_keyboard():
-    box('Keyboard_Base',(0,-.365,.769),(.444,.168,.027),'ABS_Ivory',.009)
-    box('Keyboard_Keybed',(0,-.361,.785),(.421,.146,.008),'ABS_Shadow',.004)
-    # Sculpted keycaps with a shallow concave top and real gaps.
-    def keycap(name,label,x,y,w=.015,h=.015,mat='Key_Cream',small=False):
-        z=.797+((y+.43)/.15)*.009
-        # Four outer corner loops keep the top gently dished without an exaggerated bevel.
-        sizes=[(w,h,z-.009),(w,h,z-.004),(w-.003,h-.003,z+.001)]
+    # A single sloping deck supports every row, including the raised function row.
+    # Cap skirts extend 1.7 mm into it; there is no exposed air gap beneath a key.
+    slope=.07
+    def deck_z(y):return .784+slope*(y+.365)
+    base=box('Keyboard_Base',(0,-.365,.769),(.444,.168,.026),'ABS_Ivory',.005)
+    for v in base.data.vertices:
+        if v.co.z>0:v.co.z=deck_z(base.location.y+v.co.y)-base.location.z
+    for x in [-.181,.181]:
+        for y in [-.414,-.315]:box('Keyboard_Rubber_Foot',(x,y,.753),(.032,.019,.006),'Cable',.001,'Keyboard')
+    bed=box('Keyboard_Keybed',(0,-.361,.7826),(.421,.146,.004),'ABS_Shadow',.001)
+    for v in bed.data.vertices:v.co.z+=slope*(bed.location.y+v.co.y+.365)
+    # ANSI 101-key spacing, without the later Windows/menu keys.
+    unit=.018;gap=.0025;left=-.209;row_y=[-.326-i*.0215 for i in range(5)]
+    def keycap(name,label,x,y,w=unit-gap,h=.0185,mat='Key_Cream',small=False):
+        sizes=[(w,h,-.0017),(w,h,.004),(w-.0028,h-.0028,.009)]
         vs=[]
-        for sw,sh,zz in sizes:
-            vs.extend([(x-sw/2,y-sh/2,zz),(x+sw/2,y-sh/2,zz),(x+sw/2,y+sh/2,zz),(x-sw/2,y+sh/2,zz)])
+        for sw,sh,dz in sizes:
+            for dx,dy in [(-sw/2,-sh/2),(sw/2,-sh/2),(sw/2,sh/2),(-sw/2,sh/2)]:
+                vs.append((x+dx,y+dy,deck_z(y+dy)+dz))
         fs=[(3,2,1,0)]
         for j in range(2):
             for k in range(4):fs.append((j*4+k,j*4+(k+1)%4,(j+1)*4+(k+1)%4,(j+1)*4+k))
@@ -328,40 +335,97 @@ def stage_keyboard():
         ob=bpy.data.objects.new(name,me);collection('Keyboard').objects.link(ob);me.materials.append(M[mat])
         mod=ob.modifiers.new('Key edge','BEVEL');mod.width=.0006;mod.segments=2
         ob.modifiers.new('Normals','WEIGHTED_NORMAL')
-        text_obj(name+'_Legend',label,(x,y-.002,z+.002),.0028 if small else .004,'Ink',rotation=(0,0,0),cname='Keyboard',align='CENTER')
-    left=-.202;step=.018
-    keycap('Key_Esc','Esc',left,-.297,mat='Key_Grey',small=True)
-    for i in range(12):keycap('Key_F%d'%(i+1),'F%d'%(i+1),left+.042+i*.0185,-.297,small=True)
-    rows=[
-        ('` 1 2 3 4 5 6 7 8 9 0 - ='.split(),-.325,0),
-        ('Q W E R T Y U I O P [ ]'.split(),-.346,.027),
-        ('A S D F G H J K L ; \"'.split(),-.367,.035),
-        ('Z X C V B N M , . /'.split(),-.388,.044),
-    ]
-    for labels,y,offset in rows:
-        for i,label in enumerate(labels):keycap('Key_'+str(ord(label[0])),label,left+offset+i*step,y)
-    keycap('Key_Backspace','Back',.036,-.325,.029,mat='Key_Grey',small=True)
-    keycap('Key_Tab','Tab',left+.003,-.346,.023,mat='Key_Grey',small=True)
-    keycap('Key_Caps','Caps',left+.006,-.367,.029,mat='Key_Grey',small=True)
-    keycap('Key_Shift','Shift',left+.010,-.388,.036,mat='Key_Grey',small=True)
-    keycap('Key_Return','Enter',.044,-.364,.029,.034,mat='Key_Grey',small=True)
-    keycap('Key_ShiftR','Shift',.024,-.388,.052,mat='Key_Grey',small=True)
-    for x,label in [(-.196,'Ctrl'),(-.155,'Alt'),(.021,'Alt'),(.053,'Ctrl')]:keycap('Key_'+label+'_Bottom',label,x,-.413,.026,mat='Key_Grey',small=True)
-    keycap('Key_Space','',-.068,-.413,.126)
+        ly=y-.002
+        legend=text_obj(name+'_Legend',label,(x,ly,deck_z(ly)+.0095),.0035 if small else .0055,'Ink',rotation=(math.atan(slope),0,0),cname='Keyboard',align='CENTER')
+        if os.path.exists('C:/Windows/Fonts/arialbd.ttf'):
+            legend.data.font=bpy.data.fonts.get('Arial Bold') or bpy.data.fonts.load('C:/Windows/Fonts/arialbd.ttf')
+    def row(index,keys):
+        cursor=0
+        for name,label,span,modifier in keys:
+            keycap(name,label,left+(cursor+span/2)*unit,row_y[index],span*unit-gap,
+                   mat='Key_Grey' if modifier else 'Key_Cream',small=len(label)>1)
+            cursor+=span
+        assert abs(cursor-15)<1e-8,'The main key rows must be exactly 15 units wide'
+    def letters(labels):return [('Key_'+str(ord(label)),label,1,False) for label in labels]
+    row(0,letters('`1234567890-=')+[('Key_Backspace','Back',2,True)])
+    row(1,[('Key_Tab','Tab',1.5,True)]+letters('QWERTYUIOP[]')+[('Key_Backslash','\\',1.5,False)])
+    row(2,[('Key_Caps','Caps',1.75,True)]+letters("ASDFGHJKL;'")+[('Key_Return','Enter',2.25,True)])
+    row(3,[('Key_Shift','Shift',2.25,True)]+letters('ZXCVBNM,./')+[('Key_ShiftR','Shift',2.75,True)])
+    for start,span,name,label in [(0,1.5,'CtrlL','Ctrl'),(2.5,1.5,'AltL','Alt'),
+                                   (4,7,'Space',''),(11,1.5,'AltR','Alt'),(13.5,1.5,'CtrlR','Ctrl')]:
+        keycap('Key_'+name,label,left+(start+span/2)*unit,row_y[4],span*unit-gap,
+               mat='Key_Cream' if name=='Space' else 'Key_Grey',small=True)
+    keycap('Key_Esc','Esc',left+unit/2,-.297,h=.0155,mat='Key_Grey',small=True)
+    for group,start in enumerate([2,6.5,11]):
+        for i in range(4):
+            number=group*4+i+1
+            keycap('Key_F%d'%number,'F%d'%number,left+(start+i+.5)*unit,-.297,h=.0155,small=True)
+    nav_left=.070
+    for i,label in enumerate(['PrtSc','Scroll','Pause']):
+        keycap('Key_'+label,label,nav_left+(i+.5)*unit,-.297,h=.0155,small=True)
     for j,labels in enumerate([['Ins','Home','PgUp'],['Del','End','PgDn']]):
-        for i,label in enumerate(labels):keycap('Key_'+label,label,.084+i*.018,-.327-j*.021,small=True)
-    for x,y,label in [(.102,-.388,'^'),(.084,-.410,'<'),(.102,-.410,'v'),(.120,-.410,'>')]:keycap('Arrow_'+label,label,x,y,mat='Key_Grey')
-    for j,labels in enumerate([['Num','/','*','-'],['7','8','9','+'],['4','5','6',''],['1','2','3','Enter'],['0','.','','']]):
-        for i,label in enumerate(labels):
-            if label:keycap('Num_'+label,label,.15+i*.018,-.326-j*.021,mat='Key_Cream',small=len(label)>1)
-    for i in range(3):box('Keyboard_LED_%d'%i,(.159+i*.017,-.292,.799),(.003,.006,.001),'Green_LED',.0003,'Keyboard')
-    cable('Keyboard_Cable',[(-.18,-.284,.79),(-.31,-.19,.77),(-.32,.18,.768),(-.12,.28,.80)],.0027)
-    # Mouse with rounded shell, button split and dark cloth mat.
+        for i,label in enumerate(labels):keycap('Key_'+label,label,nav_left+(i+.5)*unit,row_y[j],small=True)
+    for i,j,label in [(1,3,'^'),(0,4,'<'),(1,4,'v'),(2,4,'>')]:
+        keycap('Arrow_'+label,label,nav_left+(i+.5)*unit,row_y[j],mat='Key_Grey')
+    num_left=.135
+    for j,labels in enumerate([['Num','/','*','-'],['7','8','9'],['4','5','6'],['1','2','3']]):
+        for i,label in enumerate(labels):keycap('Num_'+label,label,num_left+(i+.5)*unit,row_y[j],small=len(label)>1)
+    keycap('Num_0','0',num_left+unit,row_y[4],2*unit-gap)
+    keycap('Num_Decimal','.',num_left+2.5*unit,row_y[4])
+    for name,label,a,b in [('Plus','+',1,2),('Enter','Enter',3,4)]:
+        keycap('Num_'+name,label,num_left+3.5*unit,(row_y[a]+row_y[b])/2,h=.0215+.0185,small=len(label)>1)
+    for i in range(3):
+        x=.156+i*.019;y=-.297
+        led=box('Keyboard_LED_%d'%i,(x,y,deck_z(y)+.0012),(.0028,.005,.001),'Green_LED',.0003,'Keyboard')
+        led.rotation_euler.x=math.atan(slope)
+    cable('Keyboard_Cable',[(-.18,-.283,.782),(-.31,-.19,.77),(-.32,.18,.768),(-.12,.28,.80)],.0027)
+    # A continuous, low two-button ball-mouse shell; button seams follow its dome.
     box('Mouse_Mat',(.337,-.345,.752),(.173,.20,.003),'Key_Grey',.006,'Props')
-    box('Mouse_Lower',(.329,-.352,.765),(.056,.094,.022),'ABS_Shadow',.016,'Props')
-    box('Mouse_Shell',(.329,-.346,.780),(.057,.087,.025),'ABS_Ivory',.018,'Props')
-    for x in [.314,.344]:box('Mouse_Button',(x,-.321,.791),(.027,.040,.011),'ABS_Ivory',.007,'Props')
-    cable('Mouse_Cable',[(.329,-.30,.78),(.40,-.2,.756),(.33,.30,.76),(.075,.275,.828)],.0018)
+    mx=.329;my=-.350;rx=.030;ry=.053;seam_z=.760
+    for y in [my-.031,my+.031]:box('Mouse_Glide',(mx,y,.754),(.025,.012,.001),'ABS_Shadow',.0004,'Props')
+    def mouse_mesh(name,verts,faces,mat):
+        me=bpy.data.meshes.new(name);me.from_pydata(verts,[],faces);me.update()
+        ob=bpy.data.objects.new(name,me);collection('Props').objects.link(ob);me.materials.append(M[mat])
+        for p in me.polygons:p.use_smooth=True
+        return ob
+    verts=[];faces=[];segments=64
+    for a,b,z in [(.027,.048,.7545),(.0295,.0525,.7565),(rx,ry,seam_z)]:
+        for i in range(segments):
+            angle=2*math.pi*i/segments
+            verts.append((mx+a*math.cos(angle),my+b*math.sin(angle),z))
+    faces.append(tuple(reversed(range(segments))))
+    for ring in range(2):
+        for i in range(segments):
+            j=(i+1)%segments
+            faces.append((ring*segments+i,ring*segments+j,(ring+1)*segments+j,(ring+1)*segments+i))
+    faces.append(tuple(range(2*segments,3*segments)))
+    mouse_mesh('Mouse_Lower',verts,faces,'ABS_Shadow')
+    def mouse_patch(name,t0,t1,u0,u1,mat,offset=0):
+        vs=[];fs=[];rows=[];ny=32;nx=24
+        for j in range(ny+1):
+            t=t0+(t1-t0)*j/ny
+            if abs(t)>1-1e-9:
+                rows.append([len(vs)]);vs.append((mx,my+ry*t,seam_z+offset));continue
+            width=rx*math.sqrt(1-t*t)
+            height=.028*(1-t*t)**.62*(1-.13*t)
+            ids=[]
+            for i in range(nx+1):
+                u=u0+(u1-u0)*i/nx
+                ids.append(len(vs));vs.append((mx+width*u,my+ry*t,seam_z+height*max(0,1-u*u)**.65+offset))
+            rows.append(ids)
+        for a,b in zip(rows,rows[1:]):
+            if len(a)==1:
+                fs.extend((a[0],b[i+1],b[i]) for i in range(nx))
+            elif len(b)==1:
+                fs.extend((a[i],a[i+1],b[0]) for i in range(nx))
+            else:
+                fs.extend((a[i],a[i+1],b[i+1],b[i]) for i in range(nx))
+        return mouse_mesh(name,vs,fs,mat)
+    mouse_patch('Mouse_Button_Seam',-1,1,-1,1,'ABS_Shadow',-.00065)
+    mouse_patch('Mouse_Shell',-1,.135,-1,1,'ABS_Ivory')
+    mouse_patch('Mouse_Button_L',.15,1,-1,-.011,'ABS_Ivory')
+    mouse_patch('Mouse_Button_R',.15,1,.011,1,'ABS_Ivory')
+    cable('Mouse_Cable',[(mx,my+ry-.001,seam_z+.001),(.332,-.279,.760),(.40,-.2,.756),(.33,.30,.76),(.075,.275,.828)],.0018)
 
 def stage_disk():
     disk=empty('Floppy_Disk',cname='Interactive')
@@ -420,11 +484,10 @@ def stage_props():
         box('Library_Label_%d'%i,(-.52,-.158+i*.018,.865),(.072,.001,.033),'Paper',.001,'Props')
     # Open handwritten command card, lies flat for a plausible close-up.
     box('Command_Note',(-.45,-.365,.753),(.17,.12,.0006),'Paper',.001,'Props')
-    for y in [-.338,-.36,-.382,-.404]:box('Note_Line',(-.45,y,.7535),(.15,.0004,.0001),'ABS_Shadow',0,'Props')
-    text_obj('Note_Heading','TO PLAY THE DISK',(-.521,-.33,.754),.008,'Ink',rotation=(0,0,0),cname='Props')
-    text_obj('Note_Command','A:   /   DIR   /   STAR',(-.521,-.355,.754),.007,'Ink',rotation=(0,0,0),cname='Props')
-    text_obj('Note_Friend','Can you beat my score?',(-.521,-.378,.754),.006,'Ink',rotation=(0,0,0),cname='Props')
-    text_obj('Note_Sign','-  SUMMER 1994',(-.521,-.398,.754),.005,'Ink',rotation=(0,0,0),cname='Props')
+    for name,words,x,y,size,angle in [('Note_Heading','yo dude,',-.521,-.327,.010,-3),('Note_Command','A:  >  DIR  >  STAR',-.518,-.354,.007,2),('Note_Friend',"dont trash my high score",-.522,-.378,.006,-2),('Note_Sign','- J.    (bring it back!)',-.493,-.399,.005,3)]:
+        ob=text_obj(name,words,(x,y,.754),size,'Ink',rotation=(0,0,math.radians(angle)),cname='Props')
+        font='C:/Windows/Fonts/segoepr.ttf'
+        if os.path.exists(font):ob.data.font=bpy.data.fonts.load(font,check_existing=True)
     # Ceramic mug with an actual open rim and handle.
     material('Mug',(.53,.59,.54),.23)
     cylinder('Mug_Body',(-.64,.355,.802),.037,.094,'Mug','Props')
@@ -433,15 +496,7 @@ def stage_props():
     finish(bpy.context.object,'Mug_Rim','Mug','Props')
     bpy.ops.mesh.primitive_torus_add(major_radius=.026,minor_radius=.006,major_segments=40,minor_segments=10,location=(-.683,.355,.80),rotation=(math.pi/2,0,0))
     finish(bpy.context.object,'Mug_Handle','Mug','Props')
-    # Period calendar hangs behind the computer, with simple printed grid.
-    box('Calendar_Back',(-.55,.702,1.43),(.25,.013,.32),'Paper',.003,'Props')
-    box('Calendar_Header',(-.55,.693,1.547),(.25,.006,.08),'Red_Book',.001,'Props')
-    text_obj('Calendar_Year','1994',(-.648,.688,1.55),.043,'Paper',cname='Props')
-    text_obj('Calendar_Month','JULY / SUMMER',(-.648,.688,1.515),.009,'Paper',cname='Props')
-    for j in range(5):
-        for i in range(7):
-            v=j*7+i+1
-            if v<=31:text_obj('Calendar_day_%02d'%v,str(v),(-.65+i*.030,.692,1.465-j*.034),.012,'Ink',cname='Props',align='CENTER')
+    stage_teen_room()
 
 def apply_textures():
     load_materials()
@@ -490,6 +545,8 @@ def stage2():
     load_materials();stage_keyboard();stage_disk();stage_props();apply_textures()
     bpy.context.view_layer.update()
     bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/'blender/1994-desk.blend'))
+
+exec(compile((ROOT/'blender/teen_room.py').read_text(encoding='utf-8'),'teen_room.py','exec'))
 
 if __name__=='__main__':
     stage1()

@@ -1,9 +1,11 @@
 async (page) => {
   page.setDefaultTimeout(15000);
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
   await page.goto('http://127.0.0.1:1994/');
   await page.waitForFunction(() => window.__DESK__?.state.loaded);
   await page.waitForFunction(() => getComputedStyle(document.querySelector('#loading')).visibility === 'hidden');
-  await page.getByRole('button',{name:'坐到电脑前',exact:true}).click();
+  await page.getByRole('button',{name:'Enter room',exact:true}).click();
   await page.waitForFunction(() => window.__DESK__.controls.enabled);
   const clickPhysical = async name => {
     const point = await page.evaluate(name => {
@@ -25,17 +27,17 @@ async (page) => {
   await page.waitForFunction(() => window.__DESK__.dos.state.mode==='dos');
   await clickPhysical('Lamp_Switch');
   await page.waitForFunction(() => !window.__DESK__.state.lampOn);
-  await page.screenshot({path:'output/playwright/daylight.png'});
+  await page.screenshot({path:'output/playwright/lamp-off.png'});
   await clickPhysical('Lamp_Switch');
   await page.waitForFunction(() => window.__DESK__.state.lampOn);
   await clickPhysical('Command_Note');
-  await page.getByRole('button',{name:'收起小抄',exact:true}).click();
+  await page.getByRole('button',{name:'Put note down',exact:true}).click();
   // Pick the visible physical disk, rather than only exercising the toolbar shortcut.
   await clickPhysical('Floppy_Disk');
   await page.waitForFunction(() => window.__DESK__.state.diskInserted);
   await page.waitForFunction(() => !window.__DESK__.state.diskMoving);
   await page.screenshot({path:'output/playwright/desk-on.png'});
-  await page.getByRole('button',{name:'查看屏幕',exact:true}).click();
+  await page.getByRole('button',{name:'Use computer',exact:true}).click();
   await page.locator('#scene').focus();
   await page.keyboard.type('a:');await page.keyboard.press('Enter');
   await page.keyboard.type('dir');await page.keyboard.press('Enter');
@@ -56,13 +58,18 @@ async (page) => {
   if(saved.drive!=='A'||!saved.durable) throw Error('Disk save was not persisted');
   await page.screenshot({path:'output/playwright/saved.png'});
   await page.keyboard.press('Escape');
+  await page.waitForFunction(() => window.__DESK__.dos.state.mode === 'dos');
   await page.keyboard.type('type scores.dat');await page.keyboard.press('Enter');
-  await page.getByRole('button',{name:'主机电源',exact:true}).click();
-  await page.getByRole('button',{name:'主机电源',exact:true}).click();
+  await page.getByRole('button',{name:'Back to room',exact:true}).click();
+  await page.waitForFunction(() => !window.__DESK__.state.screenFocused && window.__DESK__.controls.enabled);
+  await page.getByRole('button',{name:'Use computer',exact:true}).click();
+  await page.waitForFunction(() => window.__DESK__.state.screenFocused);
+  await page.getByRole('button',{name:'PC power',exact:true}).click();
+  await page.getByRole('button',{name:'PC power',exact:true}).click();
   await page.waitForFunction(() => window.__DESK__.dos.state.bootBlocked);
-  await page.getByRole('button',{name:'弹出软盘',exact:true}).click();
+  await page.getByRole('button',{name:'Eject disk',exact:true}).click();
   await page.waitForFunction(() => !window.__DESK__.state.diskInserted);
-  if(!(await page.evaluate(() => window.__DESK__.state.screenFocused))) await page.getByRole('button',{name:'查看屏幕',exact:true}).click();
+  if(!(await page.evaluate(() => window.__DESK__.state.screenFocused))) await page.getByRole('button',{name:'Use computer',exact:true}).click();
   await page.locator('#scene').focus();await page.keyboard.press('Enter');
   await page.waitForFunction(() => window.__DESK__.dos.state.mode==='dos'&&!window.__DESK__.dos.state.bootBlocked);
   const restoredBefore=await page.evaluate(() => window.__DESK__.dos.state.highScore);
@@ -71,5 +78,6 @@ async (page) => {
   const restoredAfter=await page.evaluate(() => window.__DESK__.dos.state.highScore);
   if(JSON.stringify(restoredBefore)!==JSON.stringify(restoredAfter)) throw Error('Reload lost score');
   await page.screenshot({path:'output/playwright/intro.png'});
-  return {physicalDisk:true,commands:true,game:true,save:saved,recovery:true,reload:restoredAfter};
+  if (errors.length) throw Error('Browser page errors: ' + errors.join(' | '));
+  return {physicalDisk:true,commands:true,game:true,returnToRoom:true,save:saved,recovery:true,reload:restoredAfter,pageErrors:errors};
 }

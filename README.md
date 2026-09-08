@@ -1,6 +1,8 @@
-# 软盘里的夏天 · 1994
+# Summer '94
 
-在浏览器里体验 486 电脑、CRT 显示器、3.5 寸软盘与 DOS 操作的第一人称小场景。核心硬件在 Blender 中建模，Three.js 负责实时画面与交互。
+在一间 1994 年美式摇滚少年的卧室里，体验 486 电脑、CRT 显示器、3.5 寸软盘与 DOS 操作。硬件和房间道具在 Blender 中建模，Three.js 负责实时画面与交互。
+
+房间以虚构乐队海报、滑板、书和磁带、音响、床及耳机组成生活痕迹。照明来自暖色台灯、熔岩灯与微弱冷色室内补光；开机后屏幕也参与照明。场景已移除窗与百叶窗，运行时不加载室外 HDR。界面采用少量英文和图标，操作提示留在朋友随手写的小纸条里。
 
 ## 运行
 
@@ -9,7 +11,7 @@ npm install
 npm run dev -- --port 1994
 ```
 
-打开 http://127.0.0.1:1994/ 。本项目面向电脑浏览器、鼠标和键盘，不开发手机版。拖动环顾，滚轮靠近；点击实体开关或底部同名按钮都可以操作。点击屏幕后，键盘输入会送入模拟电脑；点击「回到桌面」退出输入。
+打开 http://127.0.0.1:1994/ 。本项目面向电脑浏览器、鼠标和键盘，不开发手机版。点击 `Enter room` 开始，拖动环顾、滚轮靠近；点击实体开关或底部图标都可以操作。悬停或用 Tab 聚焦图标可查看名称。点击屏幕或 `Use computer` 后，键盘输入会送入模拟电脑；点击 `Back to room` 返回房间视角。`Read note` 可查看小纸条。
 
 ## 第一张游戏盘
 
@@ -24,24 +26,45 @@ npm run dev -- --port 1994
 
 ## 模拟范围与存储
 
-这是 DOS 行为模拟器和原创像素游戏，没有加载真正的 MS-DOS/BIOS 镜像，也不执行任意 EXE、COM 或 BAT。支持 A:/C:、大小写不敏感、各盘工作目录、绝对/相对路径、DIR（含通配符）、TYPE、CD、MD、单文件 COPY、CLS、HELP、VER、VOL、简单 DATE/TIME/ECHO。未实现通用软件兼容、管道、重定向、批处理和完整文件系统工具。启动信息里的容量与日期属于场景设定。
+这是 DOS 行为模拟器和原创像素游戏，没有加载真正的 MS-DOS/BIOS 镜像，也不执行任意 EXE、COM 或 BAT。支持 A:/C:、大小写不敏感、各盘工作目录、绝对/相对路径、DIR（含通配符）、TYPE、CD、MD、单文件 COPY、CLS、HELP、VER、VOL、简单 DATE/TIME/ECHO，以及场景自带的图像查看器。未实现通用软件兼容、管道、重定向、批处理和完整文件系统工具。启动信息里的容量与日期属于场景设定。
 
-成绩保存在运行程序所在目录的 `SCORES.DAT`。复制 STAR.EXE 到 C: 后也可从硬盘运行，存档与软盘上的记录相互独立。虚拟文件和成绩仅存于当前浏览器、当前站点的 localStorage，不会上传；清理站点数据会重置。存储不可用时仅保留当前页面会话。
+成绩保存在运行程序所在目录的 `SCORES.DAT`。复制 STAR.EXE 到 C: 后也可从硬盘运行，存档与软盘上的记录相互独立。虚拟文件和成绩仅存于当前浏览器、当前站点的 localStorage，不会上传；清理站点数据会重置。存储不可用时仅保留当前页面会话。新增场景文件以补缺方式加入旧存档，不覆盖玩家的同名文件、目录冲突或成绩。
+
+<details>
+<summary>维护者：隐藏内容与图像查看器</summary>
+
+C 盘的 `C:\GAMES\BONUS` 包含两张彩蛋图、`VIEW.EXE` 和一份留言。可以用 `DIR`、`CD` 自行发现；入口 UI 和小纸条不会直接提示位置。
+
+```dos
+C:
+CD \GAMES\BONUS
+DIR
+VIEW MOON.GIF
+VIEW GARAGE.GIF
+```
+
+看图时按 Esc 回到原 DOS 目录，再输入另一条命令。查看器的加载失败也可用 Esc 退出。虚拟磁盘中的 `.GIF` 文件映射到项目自带 PNG；这是场景内置查看器，不是通用 GIF 解码器或任意 DOS 程序执行器。
+
+两张图对应 `public/assets/easter/moon.png` 与 `public/assets/easter/garage.png`，由 OpenAI 原生图像生成工具为本项目创作。旧存档更新仅补入缺少的目录和文件；已有同名内容优先。
+
+</details>
 
 ## 项目文件
 
 - `blender/1994-desk.blend`：可编辑的完整场景。
 - `blender/build_scene.py`：分阶段构建模型的 Blender Python 源码。
+- `blender/teen_room.py`：摇滚少年卧室的摆设、海报与道具，由主构建脚本调用。
 - `blender/refine_scene.py`：近景外形和法线修正。
 - `blender/export_scene.py`：保留交互部件、合并静态几何并导出 GLB。
 - `public/assets/desk-scene.glb`：浏览器使用的模型。
+- `public/assets/posters/static-youth.png`：原创虚构乐队海报。
 - `src/main.js`：实时场景、光影、镜头和物件交互。
 - `src/dos.js`、`src/audio.js`：DOS、游戏、持久存储和合成音效。
 - `work/asset-sources.md`：外部素材来源及许可。
 - `work/visual-review.md`：实际浏览器画面的检查记录。
 - `work/font-sources.md`：VT323 终端字体来源及 OFL 许可。
 
-Blender 使用米与 Z 向上，GLB 使用 Y 向上。电脑与道具为项目原创建模；木纹与环境素材来自 Poly Haven，许可 CC0。本版本未调用 Meshy 生成服务，也无需 API key 即可运行。
+Blender 使用米与 Z 向上，GLB 使用 Y 向上。电脑与道具为项目原创建模：键盘采用 101 键布局，键床与键帽统一坡度；鼠标采用连续拱形外壳和两枚按键。木纹来自 Poly Haven，许可 CC0；旧版 HDR 保留在素材目录但运行时不使用。海报和隐藏图像为本项目生成的原创虚构图像，来源记录见 `work/asset-sources.md`。本版本未调用 Meshy 生成服务，也无需 API key 即可运行。
 
 ## 验证
 
@@ -50,7 +73,7 @@ node --test src/dos.test.js
 npm run build
 ```
 
-最终视觉以浏览器实时画面为准；Blender 离线渲染是建模和光照参考，两者并非相同渲染器。
+最终视觉以浏览器实时画面为准；Blender 离线渲染是建模和光照参考，两者并非相同渲染器。实际检查结果及限制记录在 `work/visual-review.md`，上面的命令仅说明如何执行验证。
 
 ## 重新生成模型
 
@@ -62,6 +85,6 @@ $blenderExe = 'E:\Program Files\Blender Foundation\Blender 5.2\blender.exe'
 & $blenderExe --background 'E:\i486\blender\1994-desk.blend' --python-exit-code 1 --python 'E:\i486\blender\refine_scene.py'
 ```
 
-换目录时，将 `I486_ROOT` 环境变量设为项目绝对路径，并调整上面的路径。实际隔离重建、重复构建和重复导出均已通过；生成模型约 2.6 MiB、7.8 万三角形。
+换目录时，将 `I486_ROOT` 环境变量设为项目绝对路径，并调整上面的路径。`build_scene.py` 会加载同目录的 `teen_room.py`；保留 `public/assets`，以便重建时加载木纹和海报。模型规模随场景修改变化，最新对象数及三角形数以导出时生成的 `work/model-export.json` 为准，文件大小以实际 GLB 为准。
 
 浏览器完整流程检查脚本为 `work/browser-check.js`，使用独立的 Playwright CLI 会话运行，避免影响玩家的本地存档。

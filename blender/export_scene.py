@@ -21,7 +21,7 @@ def export_desk():
     temporary=output.with_name('desk-scene.exporting.glb')
     output.parent.mkdir(parents=True,exist_ok=True)
     (ROOT/'work').mkdir(parents=True,exist_ok=True)
-    preserve={'Screen_Surface','PC_Power_Button','Monitor_Power_Button','Drive_Eject_Button','Power_LED','Drive_LED','Monitor_LED','DeskLamp_Bulb','Lamp_Switch','Command_Note','Desk_Top'}
+    preserve={'Screen_Surface','PC_Power_Button','Monitor_Power_Button','Drive_Eject_Button','Power_LED','Drive_LED','Monitor_LED','DeskLamp_Bulb','Lamp_Switch','Command_Note','Desk_Top','Lava_Glass','Lava_Core'}
     report=None
 
     try:
@@ -57,11 +57,18 @@ def export_desk():
                         target=clean.node_tree.nodes.get('Principled BSDF')
                         src=mat.node_tree.nodes.get('Principled BSDF') if mat.use_nodes else None
                         if src is not None:
-                            for prop in ['Base Color','Metallic','Roughness','IOR','Specular IOR Level','Emission Color','Emission Strength']:
+                            for prop in ['Base Color','Metallic','Roughness','IOR','Specular IOR Level','Transmission Weight','Emission Color','Emission Strength']:
                                 if prop in src.inputs and prop in target.inputs:
                                     target.inputs[prop].default_value=src.inputs[prop].default_value
                         else:
                             target.inputs['Base Color'].default_value=mat.diffuse_color
+                        if src is not None and mat.name.startswith('Poster_Print'):
+                            for node in mat.node_tree.nodes:
+                                if node.type=='TEX_IMAGE' and node.image is not None:
+                                    tex=clean.node_tree.nodes.new('ShaderNodeTexImage')
+                                    tex.image=node.image
+                                    clean.node_tree.links.new(tex.outputs['Color'],target.inputs['Base Color'])
+                                    break
                         clean.diffuse_color=mat.diffuse_color
                         mats[mat.name]=clean
                     mesh.materials[i]=mats[mat.name]
@@ -87,7 +94,7 @@ def export_desk():
         # Merge static geometry with the same material; keep interactive parts independent.
         groups={}
         for obj in list(col.objects):
-            if obj.type=='MESH' and not obj.parent and obj.name not in preserve and len(obj.data.materials)==1 and obj.data.materials[0]:
+            if obj.type=='MESH' and not obj.parent and obj.name not in preserve and not obj.name.startswith('Lava_Blob') and len(obj.data.materials)==1 and obj.data.materials[0]:
                 groups.setdefault(obj.data.materials[0].name,[]).append(obj)
         for material,objects in groups.items():
             if len(objects)<2:continue

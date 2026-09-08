@@ -1,78 +1,76 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#262821" />
+    <meta name="theme-color" content="#20232a" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23444f40'/%3E%3Cpath d='M7 5h15l3 3v19H7Z' fill='%23e9e4d0'/%3E%3Cpath d='M11 5h10v8H11ZM11 19h10v8H11Z' fill='%23444f40'/%3E%3C/svg%3E" />
-    <meta name="description" content="坐在1994年的书桌前，开启一台486电脑，插入软盘，用DOS找回第一次使用个人电脑的好奇。" />
-    <title>软盘里的夏天 · 1994</title>
+    <meta name="description" content="A borrowed floppy. A bedroom in 1994. Boot the 486 and see what's on the disk." />
+    <title>Summer '94</title>
   </head>
   <body>
-    <main id="experience" aria-label="1994年个人电脑互动场景">
-      <canvas id="scene" tabindex="0" aria-label="三维书桌。可拖动观察，点击电脑开关、软盘或屏幕。底部按钮提供同样操作。"></canvas>
+    <main id="experience" aria-label="A bedroom in 1994">
+      <canvas id="scene" tabindex="0" aria-label="Interactive bedroom. Drag to look around. Click the computer, disk, or note. Use your keyboard at the screen. The toolbar offers the same actions."></canvas>
       <div class="scene-vignette" aria-hidden="true"></div>
 
       <header class="masthead">
-        <a class="identity" href="#" aria-label="回到初始视角"><span class="year">1994</span><span class="identity-rule"></span><span class="identity-name">软盘里的夏天</span></a>
-        <nav class="utilities" aria-label="体验设置">
-          <button id="help-toggle" class="text-button" aria-expanded="false" aria-controls="help-panel"><span aria-hidden="true">?</span> 看小抄</button>
-          <button id="sound-toggle" class="icon-button" aria-label="关闭声音" aria-pressed="true" title="关闭声音"><svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 8c2 2 2 6 0 8M18 5c4 4 4 10 0 14"/></svg><svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9 6 6m0-6-6 6"/></svg></button>
+        <a class="identity" href="#" aria-label="Reset view"><span class="year">1994</span></a>
+        <nav class="utilities" aria-label="Room controls">
+          <button id="help-toggle" class="icon-button" aria-label="Read note" title="Read note" aria-expanded="false" aria-controls="help-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v13l-5 5H5V3ZM14 21v-5h5M8 8h8M8 12h5"/></svg></button>
+          <button id="sound-toggle" class="icon-button" aria-label="Mute sound" aria-pressed="true" title="Mute sound"><svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 8c2 2 2 6 0 8M18 5c4 4 4 10 0 14"/></svg><svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9 6 6m0-6-6 6"/></svg></button>
         </nav>
       </header>
 
       <section id="intro" class="intro" aria-labelledby="intro-title">
-        <p class="chapter">第一章 <span></span> 一张借来的游戏盘</p>
-        <h1 id="intro-title">从一行命令，<br>开始一个夏天。</h1>
-        <p class="intro-story">朋友把游戏借给了你。<br>按下电源，看看这张软盘里藏着什么。</p>
-        <button id="begin" class="begin-button" disabled>坐到电脑前 <span aria-hidden="true">↗</span></button>
-        <p class="intro-footnote">拖动环顾书桌 · 使用真实键盘输入</p>
+        <h1 id="intro-title">SUMMER '94</h1>
+        <button id="begin" class="begin-button" disabled>Enter room <span aria-hidden="true">↗</span></button>
       </section>
 
-      <section id="objective" class="objective" aria-label="当前任务" hidden>
-        <p class="objective-label">朋友的游戏盘 <span id="task-number">01 / 06</span></p>
-        <p id="task-text">先打开主机与显示器。</p>
+      <section id="objective" class="objective" aria-hidden="true" hidden>
+        <p class="objective-label"><span id="task-number">01 / 06</span></p>
+        <p id="task-text"></p>
         <div class="objective-progress" aria-hidden="true"><i id="task-progress"></i></div>
       </section>
 
-      <div id="focus-notice" class="focus-notice" hidden><span class="live-dot"></span> 键盘已连接电脑 <span class="focus-notice-separator">/</span> 按小抄试着输入命令</div>
+      <div id="focus-notice" class="focus-notice" aria-hidden="true" hidden></div>
 
       <div id="hover-label" class="hover-label" hidden><span></span><p></p></div>
       <p id="notification" class="notification" role="status" aria-live="polite"></p>
 
       <footer id="controls" class="controls" hidden>
-        <p id="view-hint" class="view-hint"><span aria-hidden="true">⌖</span> 拖动观察 · 滚轮靠近</p>
-        <div class="control-actions" aria-label="电脑操作">
-          <button id="pc-power" class="control-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9M7 5a8 8 0 1 0 10 0"/></svg><span>主机电源</span><i id="pc-indicator"></i></button>
-          <button id="monitor-power" class="control-button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="1"/><path d="M8 21h8M12 17v4"/></svg><span>显示器</span><i id="monitor-indicator"></i></button>
-          <button id="disk-toggle" class="control-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h13l3 3v15H4V3Z"/><path d="M8 3v6h8V3M8 21v-8h8v8"/></svg><span>插入软盘</span></button>
+        <p id="view-hint" class="view-hint" aria-hidden="true"></p>
+        <div class="control-actions" aria-label="Computer controls">
+          <button id="pc-power" class="control-button" aria-label="PC power" title="PC power"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9M7 5a8 8 0 1 0 10 0"/></svg><span>PC power</span><i id="pc-indicator" aria-hidden="true"></i></button>
+          <button id="monitor-power" class="control-button" aria-label="Monitor power" title="Monitor power"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="1"/><path d="M8 21h8M12 17v4"/></svg><span>Monitor power</span><i id="monitor-indicator" aria-hidden="true"></i></button>
+          <button id="disk-toggle" class="control-button" aria-label="Insert disk" title="Insert disk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h13l3 3v15H4V3Z"/><path d="M8 3v6h8V3M8 21v-8h8v8"/></svg><span>Insert disk</span></button>
           <span class="controls-divider"></span>
-          <button id="screen-focus" class="control-button focus-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><span>查看屏幕</span></button>
-          <button id="return-desk" class="control-button" hidden><span aria-hidden="true">↙</span><span>回到桌面</span></button>
+          <button id="screen-focus" class="control-button focus-button" aria-label="Use computer" title="Use computer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><span>Use computer</span></button>
+          <button id="return-desk" class="control-button" hidden><span aria-hidden="true">↙</span><span>Back to room</span></button>
         </div>
-        <div class="view-actions"><button id="lamp-toggle" class="icon-button" aria-label="关闭台灯" aria-pressed="true" title="关闭台灯"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 3-4 9h16l-4-9H8ZM12 12v9M7 21h10"/></svg></button><button id="reset-view" class="icon-button" aria-label="重置视角" title="重置视角"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2 7M4 4v7h7"/></svg></button></div>
+        <div class="view-actions"><button id="lamp-toggle" class="icon-button" aria-label="Turn lamp off" aria-pressed="true" title="Turn lamp off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 3-4 9h16l-4-9H8ZM12 12v9M7 21h10"/></svg></button><button id="reset-view" class="icon-button" aria-label="Reset view" title="Reset view"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2 7M4 4v7h7"/></svg></button></div>
       </footer>
 
-      <aside id="help-panel" class="help-panel" hidden aria-label="朋友留下的小抄">
-        <button id="help-close" class="help-close" aria-label="收起小抄">×</button>
-        <p class="note-eyebrow">夹在软盘盒里的纸条</p>
-        <h2>给第一次开机的你</h2>
-        <p class="note-intro">别着急。等屏幕出现 <code>C:\&gt;</code>，它就在等你说下一句话了。</p>
+      <aside id="help-panel" class="help-panel" hidden aria-label="A note from J.">
+        <button id="help-close" class="help-close" aria-label="Put note down">×</button>
+        <span class="note-tape" aria-hidden="true"></span>
+        <h2>yo dude,</h2>
+        <p class="note-intro">here's the disk.<br>power up, wait for <code>C:\&gt;</code><br>then type this stuff:</p>
         <ol class="command-list">
-          <li><code>A:</code><div>去软盘里看看<span>输入后按 Enter。</span></div></li>
-          <li><code>DIR</code><div>看看里面有什么<span>找找以 .EXE 结尾的程序。</span></div></li>
-          <li><code>STAR</code><div>运行游戏<span>试着超过我的最高分！</span></div></li>
+          <li><code>A:</code><span>← the floppy</span></li>
+          <li><code>DIR</code><span>what's on it?</span></li>
+          <li><code>STAR</code><span>let's go!!</span></li>
         </ol>
-        <p class="note-tip">打错了用 Backspace 删除。命令不区分大小写。游戏内的操作说明会显示在屏幕上。</p>
-        <div class="note-bottom"><p>玩完记得把成绩存下来。</p><span>— 阿诚</span></div>
+        <p class="note-tip">hit Enter after each one.<br>yeah, every time.</p>
+        <div class="note-bottom"><p>don't trash my high score.</p><span>— J.</span></div>
+        <svg class="note-doodle" viewBox="0 0 70 70" aria-hidden="true"><path d="m30 8-8 22-18 4 20 9 3 20 13-17 24 6-16-20 5-21-18 10ZM12 54l-7 9M53 8l8-5M59 35l10 1"/></svg>
       </aside>
 
       <section id="loading" class="loading" aria-live="polite">
         <div class="loading-mark" aria-hidden="true"><span></span><span></span></div>
-        <p id="loading-title">阳光正落在书桌上</p>
+        <p id="loading-title">SUMMER '94</p>
         <div class="loading-line"><i id="loading-progress"></i></div>
-        <small id="loading-detail">正在准备这台老电脑…</small>
-        <button id="reload-scene" class="text-button" hidden>重新载入</button>
+        <small id="loading-detail">One sec…</small>
+        <button id="reload-scene" class="text-button" hidden>Try again</button>
       </section>
     </main>
     <script type="module" src="/src/main.js"></script>
