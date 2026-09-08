@@ -1,12 +1,14 @@
 /** A small, stateful DOS machine for the 1994 desktop. No browser DOM required. */
+import { assetUrl } from './assets.js';
+
 const VOLUME_KEY = 'i486.volumes.v1';
 const RECORD_KEY = 'i486.star.record.v1';
 const TEXT_COLOR = '#c4d1c8';
 const FILE = (content, kind = 'text') => ({ type: 'file', kind, content });
 const DIR = (entries = {}) => ({ type: 'dir', entries });
 const BONUS_IMAGES = Object.freeze({
-  MOON: '/assets/easter/moon.png',
-  GARAGE: '/assets/easter/garage.png'
+  MOON: assetUrl('easter/moon.png'),
+  GARAGE: assetUrl('easter/garage.png')
 });
 
 function bonusFiles() {

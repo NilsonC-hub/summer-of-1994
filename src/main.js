@@ -12,9 +12,10 @@ import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { DosMachine } from './dos.js';
 import { RetroAudio } from './audio.js';
+import { assetUrl } from './assets.js';
 
 // Bundled OFL terminal face; no external font request is needed while playing.
-const terminalFont = new FontFace('VT323', 'url(/assets/fonts/VT323-Regular.ttf)');
+const terminalFont = new FontFace('VT323', `url(${assetUrl('fonts/VT323-Regular.ttf')})`);
 terminalFont.load().then(font => document.fonts.add(font)).catch(() => {});
 
 const $ = (selector) => document.querySelector(selector);
@@ -318,9 +319,9 @@ function setupModel(gltf) {
     });
   });
   const textureLoader = new THREE.TextureLoader();
-  const woodColor = textureLoader.load('/assets/textures/dark_wood_diff_2k.jpg');
-  const woodRoughness = textureLoader.load('/assets/textures/dark_wood_rough_2k.jpg');
-  const woodNormal = textureLoader.load('/assets/textures/dark_wood_nor_gl_2k.jpg');
+  const woodColor = textureLoader.load(assetUrl('textures/dark_wood_diff_2k.jpg'));
+  const woodRoughness = textureLoader.load(assetUrl('textures/dark_wood_rough_2k.jpg'));
+  const woodNormal = textureLoader.load(assetUrl('textures/dark_wood_nor_gl_2k.jpg'));
   woodColor.colorSpace = THREE.SRGBColorSpace;
   [woodColor, woodRoughness, woodNormal].forEach((texture) => {
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
@@ -405,7 +406,7 @@ function setupModel(gltf) {
 
 function loadModel() {
   const loader = new GLTFLoader();
-  loader.load('/assets/desk-scene.glb', (gltf) => {
+  loader.load(assetUrl('desk-scene.glb'), (gltf) => {
     try { setupModel(gltf); } catch (error) { loadError(error); }
   }, (event) => {
     const percent = event.total ? Math.min(95, Math.round(event.loaded / event.total * 95)) : 32;
