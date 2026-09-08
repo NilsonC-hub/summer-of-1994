@@ -1,0 +1,75 @@
+async (page) => {
+  page.setDefaultTimeout(15000);
+  await page.goto('http://127.0.0.1:1994/');
+  await page.waitForFunction(() => window.__DESK__?.state.loaded);
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#loading')).visibility === 'hidden');
+  await page.getByRole('button',{name:'坐到电脑前',exact:true}).click();
+  await page.waitForFunction(() => window.__DESK__.controls.enabled);
+  const clickPhysical = async name => {
+    const point = await page.evaluate(name => {
+      const app = window.__DESK__, object = app.model.getObjectByName(name);
+      let point = app.camera.position.clone();
+      if (object.isMesh) {
+        object.geometry.computeBoundingBox();
+        object.geometry.boundingBox.getCenter(point).applyMatrix4(object.matrixWorld);
+      } else object.getWorldPosition(point);
+      point.project(app.camera);
+      return {x:(point.x+1)*innerWidth/2,y:(1-point.y)*innerHeight/2};
+    },name);
+    await page.locator('#scene').click({position:point});
+  };
+  await clickPhysical('PC_Power_Button');
+  await page.waitForFunction(() => window.__DESK__.state.pcOn);
+  await clickPhysical('Monitor_Power_Button');
+  await page.waitForFunction(() => window.__DESK__.state.monitorOn);
+  await page.waitForFunction(() => window.__DESK__.dos.state.mode==='dos');
+  await clickPhysical('Lamp_Switch');
+  await page.waitForFunction(() => !window.__DESK__.state.lampOn);
+  await page.screenshot({path:'output/playwright/daylight.png'});
+  await clickPhysical('Lamp_Switch');
+  await page.waitForFunction(() => window.__DESK__.state.lampOn);
+  await clickPhysical('Command_Note');
+  await page.getByRole('button',{name:'收起小抄',exact:true}).click();
+  // Pick the visible physical disk, rather than only exercising the toolbar shortcut.
+  await clickPhysical('Floppy_Disk');
+  await page.waitForFunction(() => window.__DESK__.state.diskInserted);
+  await page.waitForFunction(() => !window.__DESK__.state.diskMoving);
+  await page.screenshot({path:'output/playwright/desk-on.png'});
+  await page.getByRole('button',{name:'查看屏幕',exact:true}).click();
+  await page.locator('#scene').focus();
+  await page.keyboard.type('a:');await page.keyboard.press('Enter');
+  await page.keyboard.type('dir');await page.keyboard.press('Enter');
+  await page.waitForFunction(() => Math.abs(window.__DESK__.camera.position.x) < .002);
+  await page.screenshot({path:'output/playwright/dos-directory.png'});
+  await page.keyboard.type('star');await page.keyboard.press('Enter');
+  await page.waitForFunction(() => window.__DESK__.dos.state.game?.phase==='title');
+  await page.keyboard.press('Enter');
+  await page.keyboard.down('ArrowRight');
+  await page.waitForFunction(() => window.__DESK__.dos.state.game.timeRemaining<28);
+  await page.keyboard.up('ArrowRight');
+  await page.screenshot({path:'output/playwright/game.png'});
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => window.__DESK__.dos.state.game.phase==='name');
+  await page.keyboard.type('TST');await page.keyboard.press('Enter');
+  await page.waitForFunction(() => window.__DESK__.dos.state.game.saved);
+  const saved=await page.evaluate(() => window.__DESK__.dos.state.lastSave);
+  if(saved.drive!=='A'||!saved.durable) throw Error('Disk save was not persisted');
+  await page.screenshot({path:'output/playwright/saved.png'});
+  await page.keyboard.press('Escape');
+  await page.keyboard.type('type scores.dat');await page.keyboard.press('Enter');
+  await page.getByRole('button',{name:'主机电源',exact:true}).click();
+  await page.getByRole('button',{name:'主机电源',exact:true}).click();
+  await page.waitForFunction(() => window.__DESK__.dos.state.bootBlocked);
+  await page.getByRole('button',{name:'弹出软盘',exact:true}).click();
+  await page.waitForFunction(() => !window.__DESK__.state.diskInserted);
+  if(!(await page.evaluate(() => window.__DESK__.state.screenFocused))) await page.getByRole('button',{name:'查看屏幕',exact:true}).click();
+  await page.locator('#scene').focus();await page.keyboard.press('Enter');
+  await page.waitForFunction(() => window.__DESK__.dos.state.mode==='dos'&&!window.__DESK__.dos.state.bootBlocked);
+  const restoredBefore=await page.evaluate(() => window.__DESK__.dos.state.highScore);
+  await page.reload();await page.waitForFunction(() => window.__DESK__?.state.loaded);
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#loading')).visibility === 'hidden');
+  const restoredAfter=await page.evaluate(() => window.__DESK__.dos.state.highScore);
+  if(JSON.stringify(restoredBefore)!==JSON.stringify(restoredAfter)) throw Error('Reload lost score');
+  await page.screenshot({path:'output/playwright/intro.png'});
+  return {physicalDisk:true,commands:true,game:true,save:saved,recovery:true,reload:restoredAfter};
+}
