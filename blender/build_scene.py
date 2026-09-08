@@ -83,11 +83,21 @@ def text_obj(name, text, loc, size=.005, mat='Ink', rotation=(math.pi/2,0,0), cn
         mw=obj.matrix_world.copy();obj.parent=parent;obj.matrix_world=mw
     return obj
 
-def cable(name, points, radius=.0025, mat='Cable', cname='Hardware'):
+def cable(name, points, radius=.0025, mat='Cable', cname='Hardware', rest_on=None):
     cr=bpy.data.curves.new(name,'CURVE');cr.dimensions='3D';cr.resolution_u=12
     spl=cr.splines.new('BEZIER');spl.bezier_points.add(len(points)-1)
     for p,co in zip(spl.bezier_points,points):
         p.co=co;p.handle_left_type='AUTO';p.handle_right_type='AUTO'
+    if rest_on is not None:
+        # Retain the smooth XY route, but keep the Z profile monotonic between
+        # supports. AUTO handles otherwise dip below the tabletop near a rise.
+        floor=rest_on+radius+.0003
+        for p in spl.bezier_points:
+            left=p.handle_left.copy();right=p.handle_right.copy()
+            p.handle_left_type='FREE';p.handle_right_type='FREE'
+            p.co.z=max(p.co.z,floor)
+            left.z=right.z=p.co.z
+            p.handle_left=left;p.handle_right=right
     cr.bevel_depth=radius;cr.bevel_resolution=3
     ob=bpy.data.objects.new(name,cr);collection(cname).objects.link(ob);cr.materials.append(M[mat]);return ob
 
@@ -425,7 +435,7 @@ def stage_keyboard():
     mouse_patch('Mouse_Shell',-1,.135,-1,1,'ABS_Ivory')
     mouse_patch('Mouse_Button_L',.15,1,-1,-.011,'ABS_Ivory')
     mouse_patch('Mouse_Button_R',.15,1,.011,1,'ABS_Ivory')
-    cable('Mouse_Cable',[(mx,my+ry-.001,seam_z+.001),(.332,-.279,.760),(.40,-.2,.756),(.33,.30,.76),(.075,.275,.828)],.0018)
+    cable('Mouse_Cable',[(mx,my+ry-.001,seam_z+.001),(.335,-.263,.758),(.355,-.236,.756),(.385,-.10,.7522),(.39,.16,.7522),(.31,.30,.756),(.14,.315,.774),(.075,.275,.828)],.0018,rest_on=.75)
 
 def stage_disk():
     disk=empty('Floppy_Disk',cname='Interactive')

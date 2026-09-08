@@ -187,4 +187,11 @@ def stage_teen_room():
         box('Headphone_Earcup',(x,-.346,.769),(.046,.071,.035),'Black',.012,'Props')
         box('Headphone_Cushion',(x,-.346,.755),(.042,.063,.014),'Speaker_Cloth',.008,'Props')
     cable('Headphone_Band',[(.60,-.318,.779),(.592,-.239,.78),(.669,-.214,.78),(.745,-.239,.78),(.738,-.318,.779)],.007,'Black','Props')
-    cable('Headphone_Cord',[(.605,-.381,.768),(.53,-.437,.756),(.44,-.423,.755),(.50,-.32,.755),(.46,-.27,.755)],.0012,'Cable','Props')
+    cable('Headphone_Cord',[(.605,-.381,.768),(.568,-.408,.754),(.505,-.43,.7518),(.455,-.399,.7518),(.500,-.326,.7518),(.465,-.275,.7532)],.0014,'Cable','Props',rest_on=.75)
+    # The unplugged 3.5 mm jack makes the loose end intentional and readable.
+    plug_axis=Vector((-.5,.8660254,0));plug_start=Vector((.465,-.275,.7532))
+    plug_rotation=plug_axis.to_track_quat('Z','Y').to_euler()
+    cylinder('Headphone_Plug_Boot',plug_start+plug_axis*.009,.0028,.018,'Black','Props',rotation=plug_rotation,vertices=24)
+    cylinder('Headphone_Plug_Tip',plug_start+plug_axis*.024,.00175,.012,'Steel','Props',rotation=plug_rotation,vertices=24)
+    for d in [.021,.025]:
+        cylinder('Headphone_Plug_Ring',plug_start+plug_axis*d,.0018,.0007,'Black','Props',rotation=plug_rotation,vertices=24)
