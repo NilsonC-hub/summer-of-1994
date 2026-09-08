@@ -150,6 +150,29 @@ def stage_teen_room():
         sticker.rotation_euler.x=mix_pitch
     text_obj('Mix_Label','SUMMER MIX / J.',mixtape_point(-.086,-.0408,.0057),.0055,'Ink',rotation=(math.pi/2+mix_pitch,0,0),cname='Props')
 
+    # A friend's small secret, tucked under the front-left corner of the disk box.
+    material('Secret_Paper',(.55,.64,.485),.93)
+    material('Secret_Ink',(.02,.055,.11),.92)
+    secret_x=-.66;secret_y=-.225;secret_angle=math.radians(-8)
+    secret_cos=math.cos(secret_angle);secret_sin=math.sin(secret_angle)
+    def secret_point(x,y,z):
+        return (secret_x+secret_cos*x-secret_sin*y,secret_y+secret_sin*x+secret_cos*y,z)
+    secret=box('Secret_Note',(secret_x,secret_y,.7505),(.170,.100,.0008),'Secret_Paper',.0003,'Props')
+    secret.rotation_euler.z=secret_angle
+    secret_font_path=next((p for p in ['C:/Windows/Fonts/segoepr.ttf','C:/Windows/Fonts/georgia.ttf'] if os.path.exists(p)),None)
+    secret_font=bpy.data.fonts.load(secret_font_path,check_existing=True) if secret_font_path else None
+    for name,words,y,size,tilt in [
+        ('Greeting','yo, try these on C:\\',.027,.0085,1),
+        ('Moon','VIEW MOON.GIF',.008,.0095,-1),
+        ('Garage','VIEW GARAGE.GIF',-.012,.0095,.5),
+        ('Sign','keep it between us. — J.',-.036,.007,-1.5),
+    ]:
+        lettering=text_obj('Secret_Note_'+name,words,secret_point(-.071,y,.7514),size,'Secret_Ink',rotation=(0,0,secret_angle+math.radians(tilt)),cname='Props')
+        if secret_font:lettering.data.font=secret_font
+        lettering.data.offset=.000045
+    tape=box('Secret_Note_Tape',secret_point(-.063,.046,.75105),(.035,.014,.0003),'Tape',.0001,'Props')
+    tape.rotation_euler.z=secret_angle+math.radians(16)
+
     # Pins, tickets and a lopsided flyer above the bookcase.
     box('Corkboard_Frame',(.977,.697,1.954),(.54,.023,.42),'Wood_Edge',.004,'Props')
     box('Corkboard_Surface',(.977,.681,1.954),(.514,.007,.394),'Cork',.001,'Props')

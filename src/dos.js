@@ -9,29 +9,24 @@ const BONUS_IMAGES = Object.freeze({
   GARAGE: '/assets/easter/garage.png'
 });
 
-function bonusDirectory() {
-  return DIR({
+function bonusFiles() {
+  return {
     'MOON.GIF': FILE('MOON', 'image'),
     'GARAGE.GIF': FILE('GARAGE', 'image'),
     'VIEW.EXE': FILE('VGA_VIEWER_1994', 'program'),
-    'README.TXT': FILE('dude, you found my stash.\n\nVIEW MOON.GIF\nVIEW GARAGE.GIF\n\nESC gets you back here.\nkeep these off the school printer, ok?\n\n- j')
-  });
+    'PHOTOS.TXT': FILE('hey bro, check these out:\n\nVIEW MOON.GIF\nVIEW GARAGE.GIF\n\nESC gets you back here.\nkeep these off the school printer, ok?\n\n- j')
+  };
 }
 
 // Upgrade existing disks additively. User-created files and directory conflicts win.
 function installBonus(hardDisk) {
   let changed = false;
-  function addMissing(target, source) {
-    for (const [name, value] of Object.entries(source.entries)) {
-      if (!Object.hasOwn(target.entries, name)) {
-        target.entries[name] = clone(value);
-        changed = true;
-      } else if (target.entries[name]?.type === 'dir' && value.type === 'dir') {
-        addMissing(target.entries[name], value);
-      }
+  for (const [name, value] of Object.entries(bonusFiles())) {
+    if (!Object.hasOwn(hardDisk.entries, name)) {
+      hardDisk.entries[name] = value;
+      changed = true;
     }
   }
-  addMissing(hardDisk, DIR({ GAMES: DIR({ BONUS: bonusDirectory() }) }));
   return changed;
 }
 
@@ -49,10 +44,11 @@ function defaultVolumes() {
   return {
     C: DIR({
       DOS: DIR({ 'HELP.TXT': FILE('DOS QUICK REFERENCE\n\nDIR        List files\nTYPE name  Read a text file\nCD folder  Change directory\nCOPY a b   Copy a file\nA: or C:   Change drive\nCLS        Clear the screen') }),
-      GAMES: DIR({ BONUS: bonusDirectory() }),
+      GAMES: DIR(),
       'AUTOEXEC.BAT': FILE('@ECHO OFF\nPROMPT $P$G\nPATH C:\\DOS'),
       'CONFIG.SYS': FILE('FILES=30\nBUFFERS=20'),
-      'README.TXT': FILE('WELCOME HOME.\n\nYour computer starts from its hard disk, drive C:.\nThe 3.5-inch floppy drive is A:.\n\nInsert the disk marked STAR COURIER.\nType A: and press ENTER.\nType DIR to see what is on the disk.\nType STAR to run the game.\n\nTip: commands work in upper or lower case.')
+      'README.TXT': FILE('WELCOME HOME.\n\nYour computer starts from its hard disk, drive C:.\nThe 3.5-inch floppy drive is A:.\n\nInsert the disk marked STAR COURIER.\nType A: and press ENTER.\nType DIR to see what is on the disk.\nType STAR to run the game.\n\nTip: commands work in upper or lower case.'),
+      ...bonusFiles()
     }),
     A: DIR({
       'STAR.EXE': FILE('STAR_COURIER_1994', 'program'),

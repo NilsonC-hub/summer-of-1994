@@ -21,7 +21,7 @@ def export_desk():
     temporary=output.with_name('desk-scene.exporting.glb')
     output.parent.mkdir(parents=True,exist_ok=True)
     (ROOT/'work').mkdir(parents=True,exist_ok=True)
-    preserve={'Screen_Surface','PC_Power_Button','Monitor_Power_Button','Drive_Eject_Button','Power_LED','Drive_LED','Monitor_LED','DeskLamp_Bulb','Lamp_Switch','Command_Note','Desk_Top','Lava_Glass','Lava_Core'}
+    preserve={'Screen_Surface','PC_Power_Button','Monitor_Power_Button','Drive_Eject_Button','Power_LED','Drive_LED','Monitor_LED','DeskLamp_Bulb','Lamp_Switch','Command_Note','Secret_Note','Desk_Top','Lava_Glass','Lava_Core'}
     report=None
 
     try:

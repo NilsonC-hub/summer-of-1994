@@ -27,6 +27,7 @@ const el = {
   screenFocus: $('#screen-focus'), returnDesk: $('#return-desk'), help: $('#help-panel'),
   helpToggle: $('#help-toggle'), soundToggle: $('#sound-toggle'), lampToggle: $('#lamp-toggle'),
   hoverLabel: $('#hover-label'), notification: $('#notification'),
+  secretNote: $('#secret-note'), secretNoteClose: $('#secret-note-close'),
 };
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const state = {
@@ -88,7 +89,10 @@ function updateObjective() {
 }
 
 const dos = new DosMachine({
-  onChange() { updateObjective(); },
+  onChange(machine) {
+    updateObjective();
+    audio.setGameMusic(machine.mode === 'game' && machine.game?.phase === 'playing' && !document.hidden);
+  },
   onEvent(event) {
     if (event.type === 'sound') {
       audio.play(event.sound);
@@ -377,6 +381,7 @@ function setupModel(gltf) {
   addInteraction(screenMesh, 'Use computer', focusScreen);
   addInteraction(findObject('Lamp_Switch'), () => state.lampOn ? 'Lamp off' : 'Lamp on', toggleLamp);
   addInteraction(findObject('Command_Note'), 'Read note', () => toggleHelp(true));
+  addInteraction(findObject('Secret_Note'), 'Read scribble', () => toggleSecretNote(true));
   addInteraction(findObject('DeskLamp_Shade') || findObject('DeskLamp_Base') || lampBulb, () => state.lampOn ? 'Lamp off' : 'Lamp on', toggleLamp);
   for (const [name, fallbackSize, label, action] of [
     ['PC_Power_Button', [.040, .032, .016], () => state.pcOn ? 'PC off' : 'PC on', togglePC],
@@ -541,9 +546,22 @@ function toggleLamp() {
 function toggleHelp(force) {
   const open = force ?? el.help.hidden;
   el.help.hidden = !open;
+  if (open) el.secretNote.hidden = true;
   el.helpToggle.setAttribute('aria-expanded', String(open));
   if (open) { dos.releaseKeys(); $('#help-close').focus({ preventScroll: true }); }
   else if (state.screenFocused) el.canvas.focus({ preventScroll: true });
+}
+
+function toggleSecretNote(force) {
+  const open = force ?? el.secretNote.hidden;
+  el.secretNote.hidden = !open;
+  if (open) {
+    el.help.hidden = true;
+    el.helpToggle.setAttribute('aria-expanded', 'false');
+    el.hoverLabel.hidden = true;
+    dos.releaseKeys();
+    el.secretNoteClose.focus({ preventScroll: true });
+  } else el.canvas.focus({ preventScroll: true });
 }
 
 el.begin.addEventListener('click', beginExperience);
@@ -555,6 +573,7 @@ el.returnDesk.addEventListener('click', returnToDesk);
 el.lampToggle.addEventListener('click', toggleLamp);
 el.helpToggle.addEventListener('click', () => toggleHelp());
 $('#help-close').addEventListener('click', () => toggleHelp(false));
+el.secretNoteClose.addEventListener('click', () => toggleSecretNote(false));
 $('#reset-view').addEventListener('click', () => {
   if (state.screenFocused) returnToDesk();
   else animateCamera(state.started ? desktopView.position : introView.position, state.started ? desktopView.target : introView.target);
@@ -619,6 +638,10 @@ el.canvas.addEventListener('pointerleave', () => { el.hoverLabel.hidden = true; 
 
 function onKey(event) {
   if (event.type === 'keyup') { dos.handleKey(event); return; }
+  if (!el.secretNote.hidden) {
+    if (event.key === 'Escape') { toggleSecretNote(false); event.preventDefault(); }
+    return;
+  }
   if (!state.screenFocused || !state.pcOn || !state.monitorOn || !el.help.hidden) return;
   if (document.activeElement !== el.canvas && document.activeElement !== document.body) return;
   if (event.ctrlKey || event.metaKey || event.altKey || event.key === 'Tab') return;
@@ -629,6 +652,11 @@ window.addEventListener('keydown', onKey);
 window.addEventListener('keyup', onKey);
 window.addEventListener('blur', () => {
   dos.releaseKeys();
+});
+document.addEventListener('visibilitychange', () => {
+  const machine = dos.state;
+  audio.setGameMusic(machine.mode === 'game' && machine.game?.phase === 'playing' && !document.hidden);
+  if (!document.hidden && audio.context) audio.unlock();
 });
 
 const smoothstep = (t) => t * t * (3 - 2 * t);
@@ -700,7 +728,7 @@ window.addEventListener('resize', () => {
 
 // Read-only diagnostics for visual verification in development.
 window.__DESK__ = {
-  state, dos, scene, camera, renderer, controls, composer, ambientOcclusion,
+  state, dos, audio, scene, camera, renderer, controls, composer, ambientOcclusion,
   get model() { return model; },
   get screenCenter() { return screenCenter.clone(); },
   get lights() { return { ceiling, interiorFill, roomBounce, deskLamp, lampBounce, lavaLight, shelfLight, screenGlow }; },

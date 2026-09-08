@@ -23,7 +23,9 @@ Desktop browsers with a mouse and physical keyboard only. No mobile edition is i
 
 Computer/monitor power, boot POST, insert/eject floppy, focus screen, real command entry, original short game with persistent score, return to DOS, power off. The existing game/room exit behavior remains unchanged. Local-only storage. No remote model service is required at runtime.
 
-Two image Easter eggs are discoverable on the virtual C drive through directory exploration and the bundled `VIEW` program. Viewing and loading/error states return to the same DOS directory with Esc. Existing saved files and scores take precedence; updates only add missing content. Maintenance locations are documented in a collapsed section of the README rather than in player-facing UI.
+Two image Easter eggs now live directly at the C root: `DIR` lists them, and one `VIEW MOON.GIF` or `VIEW GARAGE.GIF` command opens each. A separate handwritten sticker tucked beneath the left edge of the disk box hints at the commands. Clicking it opens a readable paper view; there is no new persistent menu. Viewing and loading/error states return to the same DOS directory with Esc. Existing saved files and scores take precedence; updates only add missing root files and retain any legacy BONUS folder.
+
+Active gameplay has an original 140 BPM, 16-bar chiptune theme, synthesised once locally and looped by the audio device. End-of-round and PC power-off fade it out. The existing sound toggle mutes both music and effects; background tabs stop the theme until the player returns to an active game.
 
 ## Asset policy
 

@@ -85,6 +85,17 @@ button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke
 .note-bottom p { margin: 0; }
 .note-bottom span { display: block; text-align: right; font-size: 21px; margin: 5px 8px 0 0; }
 .note-doodle { position: absolute; bottom: 13px; left: 31px; width: 46px; height: 46px; fill: none; stroke: #414e70bf; stroke-width: 1.35; stroke-linecap: round; stroke-linejoin: round; transform: rotate(-11deg); }
+.secret-note { width: 380px; top: 104px; max-height: calc(100svh - 168px); overflow-y: auto; background-color: #c4d1b9; color: #28415b; transform: rotate(-1.8deg); animation-name: secret-note-in; }
+.secret-note .help-close { color: #28415b; }
+.secret-note .note-tape { top: 3px; left: 219px; width: 70px; height: 20px; background: #a3b69c69; transform: rotate(8deg); }
+.secret-note h2 { transform: rotate(2deg); margin-bottom: 15px; }
+.secret-commands { list-style: none; padding: 0 0 0 5px; margin: 19px 0 18px; }
+.secret-commands li { margin: 9px 0; transform: rotate(-1deg); }
+.secret-commands li:nth-child(2) { transform: translateX(5px) rotate(1.2deg); }
+.secret-commands code { display: inline-block; font-size: 20px; line-height: 1.6; white-space: nowrap; }
+.secret-note .note-tip { transform: rotate(-2deg); }
+.secret-note .note-bottom { padding-top: 18px; transform: rotate(1deg); }
+.secret-note .note-bottom p { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
 .loading { position: absolute; inset: 0; background: #20232a; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #e0d9ca; transition: opacity .6s, visibility .6s; }
 .loading.is-complete { opacity: 0; visibility: hidden; pointer-events: none; }
 .loading-mark { width: 27px; height: 29px; border: 1px solid #a8a899; border-radius: 2px; position: relative; margin-bottom: 24px; }
@@ -98,6 +109,7 @@ button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke
 .screen-active .scene-vignette { opacity: .65; }
 @keyframes appear { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes note-in { from { opacity: 0; transform: translateY(-8px) rotate(1.6deg); } to { opacity: 1; transform: translateY(0) rotate(1.6deg); } }
+@keyframes secret-note-in { from { opacity: 0; transform: translateY(-8px) rotate(-1.8deg); } to { opacity: 1; transform: translateY(0) rotate(-1.8deg); } }
 @media (prefers-reduced-motion: reduce) {
   *, *:before, *:after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }

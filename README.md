@@ -24,6 +24,12 @@ npm run dev -- --port 1994
 
 如果开机前插着游戏数据盘，会停在 `Non-System disk`：取出软盘，查看屏幕并按任意键即可继续。
 
+## 游戏配乐
+
+每局开始后播放原创 8 位机风格主题曲 **Midnight Courier**：140 BPM、16 小节，约 27.43 秒循环，包含脉冲旋律、琶音、三角波贝斯与芯片鼓点。结束本局或关闭主机时淡出，右上角声音按钮同时控制音乐和原有音效。只退出屏幕近景时，电脑里的游戏仍在运行，音乐会继续。
+
+音乐由 `src/chiptune.js` 在本机合成一次，然后用音频缓冲循环，无外部音乐下载；切到后台时停止，回到页面后仅在游戏仍在进行时恢复。
+
 ## 模拟范围与存储
 
 这是 DOS 行为模拟器和原创像素游戏，没有加载真正的 MS-DOS/BIOS 镜像，也不执行任意 EXE、COM 或 BAT。支持 A:/C:、大小写不敏感、各盘工作目录、绝对/相对路径、DIR（含通配符）、TYPE、CD、MD、单文件 COPY、CLS、HELP、VER、VOL、简单 DATE/TIME/ECHO，以及场景自带的图像查看器。未实现通用软件兼容、管道、重定向、批处理和完整文件系统工具。启动信息里的容量与日期属于场景设定。
@@ -33,11 +39,11 @@ npm run dev -- --port 1994
 <details>
 <summary>维护者：隐藏内容与图像查看器</summary>
 
-C 盘的 `C:\GAMES\BONUS` 包含两张彩蛋图、`VIEW.EXE` 和一份留言。可以用 `DIR`、`CD` 自行发现；入口 UI 和小纸条不会直接提示位置。
+C 盘根目录直接包含两张彩蛋图、`VIEW.EXE` 和 `PHOTOS.TXT` 留言。开机后输入 `DIR` 就能发现，每张图片用一条 `VIEW` 命令打开。桌面左侧软盘盒边缘另藏着一张朋友的手写贴纸，点击可拿近阅读；没有新增常驻菜单。
 
 ```dos
 C:
-CD \GAMES\BONUS
+CD \
 DIR
 VIEW MOON.GIF
 VIEW GARAGE.GIF
@@ -45,7 +51,7 @@ VIEW GARAGE.GIF
 
 看图时按 Esc 回到原 DOS 目录，再输入另一条命令。查看器的加载失败也可用 Esc 退出。虚拟磁盘中的 `.GIF` 文件映射到项目自带 PNG；这是场景内置查看器，不是通用 GIF 解码器或任意 DOS 程序执行器。
 
-两张图对应 `public/assets/easter/moon.png` 与 `public/assets/easter/garage.png`，由 OpenAI 原生图像生成工具为本项目创作。旧存档更新仅补入缺少的目录和文件；已有同名内容优先。
+两张图对应 `public/assets/easter/moon.png` 与 `public/assets/easter/garage.png`，由 OpenAI 原生图像生成工具为本项目创作。旧存档只补入缺少的根目录文件，已有同名内容与旧 `GAMES\BONUS` 文件夹都保留。
 
 </details>
 

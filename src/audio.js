@@ -1,4 +1,6 @@
-/** Quiet, synthesised mechanical / PC-speaker sounds; no network audio assets. */
+import { renderTheme, THEME } from './chiptune.js';
+
+/** Synthesised hardware sounds and an original gameplay theme; no network audio. */
 export class RetroAudio {
   constructor({ enabled = true, volume = 0.23 } = {}) {
     this.enabled = enabled;
@@ -7,9 +9,17 @@ export class RetroAudio {
     this.master = null;
     this._lastKey = -Infinity;
     this._lastDisk = -Infinity;
+    this._musicWanted = false;
+    this._musicBuffer = null;
+    this._musicLoading = null;
+    this._musicSource = null;
+    this._musicGain = null;
+    this._musicUnavailable = false;
+    this._disposed = false;
   }
 
   async unlock() {
+    if (this._disposed) return false;
     if (!this.context) {
       const AudioContextClass = globalThis.AudioContext || globalThis.webkitAudioContext;
       if (!AudioContextClass) return false;
@@ -18,7 +28,11 @@ export class RetroAudio {
       this.master.gain.value = this.enabled ? this.volume : 0;
       this.master.connect(this.context.destination);
     }
-    try { if (this.context.state === 'suspended') await this.context.resume(); return this.context.state === 'running'; }
+    try {
+      if (this.context.state === 'suspended') await this.context.resume();
+      this._ensureMusic();
+      return this.context.state === 'running';
+    }
     catch { return false; }
   }
 
@@ -29,6 +43,64 @@ export class RetroAudio {
   setVolume(volume) {
     this.volume = Math.max(0, Math.min(1, volume));
     this.setEnabled(this.enabled);
+  }
+
+  get musicState() {
+    return {
+      title: THEME.title, wanted: this._musicWanted,
+      playing: !!this._musicSource, ready: !!this._musicBuffer,
+      loading: !!this._musicLoading, unavailable: this._musicUnavailable,
+      enabled: this.enabled, contextState: this.context?.state ?? 'locked',
+    };
+  }
+
+  setGameMusic(active) {
+    this._musicWanted = !!active && !this._disposed;
+    if (this._musicWanted) this._ensureMusic();
+    else this._stopMusic();
+  }
+
+  _ensureMusic() {
+    if (!this._musicWanted || this._disposed || this._musicUnavailable || this._musicSource || this.context?.state !== 'running') return;
+    if (!this._musicBuffer) {
+      if (!this._musicLoading) {
+        // Render once, then let the audio device loop it without JS timing jitter.
+        this._musicLoading = renderTheme().then(buffer => {
+          this._musicLoading = null;
+          if (this._disposed) return;
+          this._musicBuffer = buffer;
+          this._ensureMusic(); // Recheck intent: the player may already have left.
+        }).catch(() => {
+          this._musicLoading = null;
+          this._musicUnavailable = true; // Hardware effects and the game still work.
+        });
+      }
+      return;
+    }
+    const ctx = this.context;
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    source.buffer = this._musicBuffer;
+    source.loop = true;
+    source.loopStart = 0;
+    source.loopEnd = this._musicBuffer.duration;
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(.42, ctx.currentTime + .035);
+    source.connect(gain); gain.connect(this.master);
+    source.onended = () => { source.disconnect(); gain.disconnect(); };
+    source.start();
+    this._musicSource = source;
+    this._musicGain = gain;
+  }
+
+  _stopMusic() {
+    if (!this._musicSource) return;
+    const now = this.context.currentTime;
+    this._musicGain.gain.cancelScheduledValues(now);
+    this._musicGain.gain.setTargetAtTime(0, now, .015);
+    this._musicSource.stop(now + .08);
+    this._musicSource = null;
+    this._musicGain = null;
   }
 
   _tone(frequency, duration, { delay = 0, type = 'square', gain = 0.15, endFrequency = frequency } = {}) {
@@ -105,8 +177,11 @@ export class RetroAudio {
   }
 
   async dispose() {
+    this._disposed = true;
+    this.setGameMusic(false);
     if (this.context) await this.context.close();
     this.context = null;
     this.master = null;
+    this._musicBuffer = null;
   }
 }

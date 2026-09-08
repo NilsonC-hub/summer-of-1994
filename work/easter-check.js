@@ -15,11 +15,13 @@ async (page) => {
     await page.keyboard.type(text);
     await page.keyboard.press('Enter');
   };
-  for (const text of ['c:', 'cd \\', 'dir', 'cd games', 'dir', 'cd bonus', 'dir', 'type readme.txt']) await command(text);
+  await command('dir');
   const cwd = await page.evaluate(() => window.__DESK__.dos.state.cwd);
-  if (cwd !== 'C:\\GAMES\\BONUS') throw new Error('Exploration did not reach C:\\GAMES\\BONUS');
+  if (cwd !== 'C:\\') throw new Error('The computer did not start at C:\\');
+  const listing = await page.evaluate(() => window.__DESK__.dos.lines.map(line => line.text).join('\n'));
+  if (!/MOON\s+GIF/.test(listing) || !/GARAGE\s+GIF/.test(listing)) throw new Error('DIR at C:\\ did not list both images');
   const results = [];
-  for (const item of [{file:'MOON.GIF', command:'view moon.gif', screenshot:'output/playwright/easter-moon.png'}, {file:'GARAGE.GIF', command:'view.exe garage.gif', screenshot:'output/playwright/easter-garage.png'}]) {
+  for (const item of [{file:'MOON.GIF', command:'view moon.gif', screenshot:'output/playwright/easter-moon.png'}, {file:'GARAGE.GIF', command:'view garage.gif', screenshot:'output/playwright/easter-garage.png'}]) {
     await command(item.command);
     await page.waitForFunction(() => ['ready', 'error'].includes(window.__DESK__.dos.state.viewer?.status));
     const image = await page.evaluate(() => {
