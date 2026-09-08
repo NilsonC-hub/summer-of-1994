@@ -11,9 +11,9 @@
 
 | 修改前 | 修改后 |
 | --- | --- |
-| ![线缆修改前](../output/playwright/cables-before.png) | ![线缆修改后](../output/playwright/cables-after.png) |
+| ![线缆修改前](review/cables-before.png) | ![线缆修改后](review/cables-after.png) |
 
-![低角度接触检查](../output/playwright/cables-low.png)
+![低角度接触检查](review/cables-low.png)
 
 ## 游戏音乐、根目录彩蛋与隐藏贴纸
 
